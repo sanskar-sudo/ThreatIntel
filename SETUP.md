@@ -1,4 +1,4 @@
-# Threat Actor Intelligence Dashboard — Setup Guide
+# Threat Actor Intelligence Dashboard - Setup Guide
 
 Live MITRE ATT&CK data, auto-updated every Monday via GitHub Actions. Zero cost, zero maintenance after setup.
 
@@ -29,7 +29,7 @@ The "Last updated" badge in the top bar always reflects the date of the last run
 
 ---
 
-## Step 1 — File structure
+## Step 1 - File structure
 
 Add all four files to your repo so the structure looks exactly like this:
 
@@ -48,11 +48,11 @@ ThreatAPI/
 Important notes:
 - The `.github` folder name starts with a dot. Make sure it is not renamed.
 - The `workflows` folder must be inside `.github`, not at the root.
-- The folder names must be exact — GitHub only looks in `.github/workflows/`.
+- The folder names must be exact - GitHub only looks in `.github/workflows/`.
 
 ---
 
-## Step 2 — Create the folders and commit
+## Step 2 - Create the folders and commit
 
 Open a terminal in your repo folder and run:
 
@@ -81,7 +81,7 @@ mkdir scripts
 
 ---
 
-## Step 3 — Verify the workflow appears on GitHub
+## Step 3 - Verify the workflow appears on GitHub
 
 1. Go to your repo on github.com
 2. Click the **Actions** tab at the top of the page
@@ -91,7 +91,7 @@ If you do not see it, the `.github/workflows/` folder structure is wrong. Double
 
 ---
 
-## Step 4 — Run it manually to test
+## Step 4 - Run it manually to test
 
 Do not wait until Monday. Trigger it now:
 
@@ -99,7 +99,7 @@ Do not wait until Monday. Trigger it now:
 2. Click **Update MITRE ATT&CK Data** in the left sidebar
 3. Click the **Run workflow** dropdown on the right side
 4. Click the green **Run workflow** button
-5. Refresh the page — a new run appears with a yellow dot (running)
+5. Refresh the page - a new run appears with a yellow dot (running)
 6. Click on it to watch the live logs
 7. The whole run takes about 60 seconds
 
@@ -113,7 +113,7 @@ Your GitHub Pages site will redeploy within 30 seconds after that commit.
 
 ---
 
-## Step 5 — Visit your live site
+## Step 5 - Visit your live site
 
 Open your GitHub Pages URL:
 
@@ -127,7 +127,7 @@ You will see:
 
 ---
 
-## After setup — nothing to do
+## After setup - nothing to do
 
 The workflow runs automatically every Monday at 9am UTC. You will see a new commit every week. The badge updates automatically. No manual steps required.
 
