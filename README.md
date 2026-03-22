@@ -9,15 +9,15 @@ A threat actor intelligence dashboard built on real MITRE ATT&CK data. Browse 10
 
 ## Features
 
-**Threat Actors** — 100+ real APT groups with origin countries, aliases, technique counts, and full descriptions. Search by name, filter by origin, sort by activity.
+**Threat Actors** - 100+ real APT groups with origin countries, aliases, technique counts, and full descriptions. Search by name, filter by origin, sort by activity.
 
-**Techniques** — MITRE ATT&CK techniques grouped by tactic. Each card shows which threat actors use it and links to the official MITRE page.
+**Techniques** - MITRE ATT&CK techniques grouped by tactic. Each card shows which threat actors use it and links to the official MITRE page.
 
-**Coverage Map** — Heatmap of every actor versus every tactic. Color intensity reflects how many techniques each actor uses per tactic. Click any cell to drill into that actor's details.
+**Coverage Map** - Heatmap of every actor versus every tactic. Color intensity reflects how many techniques each actor uses per tactic. Click any cell to drill into that actor's details.
 
-**Malware and Tools** — Every malware family and tool in the ATT&CK dataset with type badges, aliases, and descriptions.
+**Malware and Tools** - Every malware family and tool in the ATT&CK dataset with type badges, aliases, and descriptions.
 
-**Actor Detail Panel** — Slides in from the right with four tabs: Overview, Techniques, Software, and Campaigns.
+**Actor Detail Panel** - Slides in from the right with four tabs: Overview, Techniques, Software, and Campaigns.
 
 ---
 
