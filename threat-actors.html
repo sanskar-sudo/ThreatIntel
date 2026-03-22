@@ -1,0 +1,1076 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Threat Actor Intelligence Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:       #07090d;
+  --bg2:      #0d1117;
+  --bg3:      #131920;
+  --bg4:      #192030;
+  --bd:       #1c2535;
+  --bd2:      #253040;
+  --tx:       #cdd6e8;
+  --tx2:      #637590;
+  --tx3:      #2e3f55;
+  --red:      #f0544f;
+  --red-d:    rgba(240,84,79,.12);
+  --amber:    #e8a030;
+  --amber-d:  rgba(232,160,48,.11);
+  --blue:     #3b9eff;
+  --blue-d:   rgba(59,158,255,.11);
+  --green:    #34c07a;
+  --green-d:  rgba(52,192,122,.11);
+  --purple:   #a673f5;
+  --purple-d: rgba(166,115,245,.11);
+  --teal:     #24c8c0;
+  --teal-d:   rgba(36,200,192,.11);
+  --pink:     #f06090;
+  --r-sm:4px; --r-md:8px; --r-lg:12px;
+  --mono:'JetBrains Mono',monospace;
+  --sans:'Outfit',sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:14px;scroll-behavior:smooth}
+body{background:var(--bg);color:var(--tx);font-family:var(--sans);font-size:14px;line-height:1.5;min-height:100vh;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;background-image:radial-gradient(ellipse 80% 50% at 50% -10%,rgba(59,158,255,.05) 0%,transparent 60%),linear-gradient(rgba(255,255,255,.011) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.011) 1px,transparent 1px);background-size:100% 100%,40px 40px,40px 40px}
+a{color:inherit;text-decoration:none}
+button{cursor:pointer;font-family:inherit}
+input,select{font-family:inherit}
+
+/* TOPBAR */
+#topbar{position:sticky;top:0;z-index:200;height:54px;background:rgba(7,9,13,.92);backdrop-filter:blur(16px);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 24px;gap:20px}
+.brand{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.brand-logo{width:28px;height:28px;border:1.5px solid var(--red);border-radius:var(--r-sm);display:grid;place-items:center;background:var(--red-d)}
+.brand-logo svg{width:14px;height:14px;fill:none;stroke:var(--red);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.brand-name{font-family:var(--sans);font-size:14px;font-weight:700;color:var(--tx)}
+.brand-name span{color:var(--red)}
+.topbar-nav{display:flex;align-items:center;gap:2px;flex:1}
+.tnav-btn{padding:5px 13px;border:none;border-radius:var(--r-sm);background:none;color:var(--tx2);font-family:var(--sans);font-size:13px;font-weight:500;transition:all .15s}
+.tnav-btn:hover{color:var(--tx);background:var(--bg3)}
+.tnav-btn.active{color:var(--blue);background:var(--blue-d)}
+.topbar-right{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.ver-badge{font-family:var(--mono);font-size:10px;font-weight:500;color:var(--green);padding:3px 9px;background:var(--green-d);border:1px solid rgba(52,192,122,.2);border-radius:20px;display:flex;align-items:center;gap:5px}
+.ver-dot{width:5px;height:5px;border-radius:50%;background:var(--green);animation:pulse 2.5s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+/* LAYOUT */
+#app{position:relative;z-index:1}
+.view{display:none;padding:22px 24px;max-width:1700px;margin:0 auto}
+.view.active{display:block;animation:fadeUp .2s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+/* STATS STRIP */
+.stats-strip{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:22px}
+.stat-card{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r-lg);padding:14px 16px;border-top:2px solid}
+.stat-label{font-family:var(--mono);font-size:10px;font-weight:500;color:var(--tx2);text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px}
+.stat-value{font-family:var(--mono);font-size:26px;font-weight:600;line-height:1;color:var(--tx)}
+.stat-sub{font-size:11px;color:var(--tx3);margin-top:3px}
+
+/* FILTERS */
+.filters-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center}
+.search-field{flex:1;min-width:200px;display:flex;align-items:center;gap:8px;background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r-md);padding:0 12px;transition:border-color .15s}
+.search-field:focus-within{border-color:var(--blue)}
+.search-field svg{width:13px;height:13px;flex-shrink:0;fill:none;stroke:var(--tx2);stroke-width:2;stroke-linecap:round}
+.search-field input{background:none;border:none;outline:none;color:var(--tx);font-family:var(--mono);font-size:12px;width:100%;padding:9px 0}
+.search-field input::placeholder{color:var(--tx3)}
+.fsel{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r-md);padding:8px 10px;color:var(--tx2);font-family:var(--sans);font-size:12.5px;font-weight:500;outline:none;cursor:pointer;transition:border-color .15s}
+.fsel:focus{border-color:var(--blue);color:var(--tx)}
+.count-chip{font-family:var(--mono);font-size:11px;color:var(--tx2);padding:8px 12px;background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r-md);white-space:nowrap;margin-left:auto}
+
+/* ACTOR GRID */
+.actor-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:10px}
+.actor-card{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r-lg);padding:16px 18px;cursor:pointer;transition:all .18s;position:relative;overflow:hidden}
+.actor-card:hover{border-color:rgba(59,158,255,.45);transform:translateY(-1px);box-shadow:0 8px 28px rgba(0,0,0,.4)}
+.actor-card-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:7px;gap:10px}
+.actor-id{font-family:var(--mono);font-size:10px;color:var(--tx3);margin-bottom:2px}
+.actor-name{font-size:15px;font-weight:600;color:var(--tx);line-height:1.2}
+.actor-aliases{font-size:11px;color:var(--tx2);margin-top:2px;font-style:italic}
+.origin-badge{font-family:var(--mono);font-size:10px;font-weight:600;padding:3px 9px;border-radius:10px;border:1px solid;white-space:nowrap;flex-shrink:0}
+.actor-desc{font-size:12px;color:var(--tx2);line-height:1.6;margin-bottom:11px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.actor-footer{display:flex;gap:5px;flex-wrap:wrap;align-items:center}
+.pill{font-family:var(--mono);font-size:10px;font-weight:500;padding:2px 8px;border-radius:10px;border:1px solid;white-space:nowrap}
+.actor-card .arrow{margin-left:auto;color:var(--tx3);font-size:12px}
+
+/* DETAIL PANEL */
+.panel-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:299;display:none;backdrop-filter:blur(3px)}
+.panel-overlay.open{display:block}
+#detail-panel{position:fixed;top:0;right:0;bottom:0;width:560px;max-width:100vw;background:var(--bg2);border-left:1px solid var(--bd2);z-index:300;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .28s cubic-bezier(.4,0,.2,1);box-shadow:-16px 0 48px rgba(0,0,0,.5)}
+#detail-panel.open{transform:translateX(0)}
+.panel-header{padding:22px 22px 16px;border-bottom:1px solid var(--bd);flex-shrink:0;position:relative}
+.panel-close{position:absolute;top:16px;right:16px;background:none;border:1px solid var(--bd);color:var(--tx2);border-radius:var(--r-sm);padding:4px 10px;font-family:var(--mono);font-size:11px;transition:all .15s}
+.panel-close:hover{border-color:var(--red);color:var(--red)}
+.panel-actor-id{font-family:var(--mono);font-size:10px;color:var(--tx3);margin-bottom:3px}
+.panel-name{font-size:21px;font-weight:700;color:var(--tx);margin-bottom:5px;line-height:1.2;padding-right:60px}
+.panel-aliases{font-size:12px;color:var(--tx2);margin-bottom:11px}
+.panel-tags{display:flex;gap:5px;flex-wrap:wrap}
+.panel-tabs{display:flex;border-bottom:1px solid var(--bd);padding:0 22px;flex-shrink:0}
+.ptab{padding:10px 14px;border:none;background:none;color:var(--tx2);font-family:var(--sans);font-size:12px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;margin-bottom:-1px}
+.ptab:hover{color:var(--tx)}
+.ptab.active{color:var(--blue);border-bottom-color:var(--blue)}
+.panel-body{flex:1;overflow-y:auto;padding:18px 22px}
+.panel-body::-webkit-scrollbar{width:4px}
+.panel-body::-webkit-scrollbar-thumb{background:var(--bd);border-radius:2px}
+.p-section{margin-bottom:22px}
+.p-section-label{font-family:var(--mono);font-size:10px;font-weight:500;color:var(--tx3);text-transform:uppercase;letter-spacing:.09em;margin-bottom:9px;padding-bottom:6px;border-bottom:1px solid var(--bd)}
+.p-desc{font-size:13px;color:var(--tx2);line-height:1.7}
+.p-link{font-family:var(--mono);font-size:11px;color:var(--blue);padding:5px 0;border-bottom:1px solid var(--bd);display:block;transition:opacity .15s}
+.p-link:hover{opacity:.7}
+.tech-item{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid rgba(28,37,53,.7)}
+.tech-item:last-child{border-bottom:none}
+.tech-item-id{font-family:var(--mono);font-size:10px;font-weight:600;color:var(--amber);background:var(--amber-d);border:1px solid rgba(232,160,48,.2);border-radius:var(--r-sm);padding:2px 7px;white-space:nowrap;flex-shrink:0;cursor:pointer}
+.tech-item-id:hover{background:rgba(232,160,48,.2)}
+.tech-item-name{font-size:12px;font-weight:500;color:var(--tx)}
+.tech-item-tactic{font-size:11px;color:var(--tx3);margin-top:1px}
+.sw-item{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid rgba(28,37,53,.7)}
+.sw-item:last-child{border-bottom:none}
+.sw-type-badge{font-family:var(--mono);font-size:10px;font-weight:600;padding:2px 7px;border-radius:10px;border:1px solid;white-space:nowrap;flex-shrink:0}
+.sw-name{font-size:12px;font-weight:500;color:var(--tx)}
+.sw-desc{font-size:11px;color:var(--tx3);margin-top:1px}
+.tactic-bar-row{margin-bottom:7px}
+.tactic-bar-labels{display:flex;justify-content:space-between;font-size:11px;color:var(--tx2);margin-bottom:3px}
+.tactic-bar-labels span{font-family:var(--mono);font-size:10px;color:var(--tx3)}
+.tactic-track{height:4px;background:var(--bg4);border-radius:3px;overflow:hidden}
+.tactic-fill{height:100%;border-radius:3px;transition:width .5s cubic-bezier(.4,0,.2,1)}
+
+/* TECHNIQUES VIEW */
+.tactic-section{margin-bottom:26px}
+.tactic-header{display:flex;align-items:center;gap:10px;margin-bottom:11px;padding-bottom:8px;border-bottom:1px solid var(--bd)}
+.tactic-name{font-size:13px;font-weight:600;color:var(--tx)}
+.tactic-count-badge{font-family:var(--mono);font-size:10px;font-weight:500;padding:2px 8px;border-radius:10px;border:1px solid}
+.tech-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:7px}
+.tech-card{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r-md);padding:11px 13px;cursor:pointer;transition:border-color .15s}
+.tech-card:hover{border-color:rgba(232,160,48,.5)}
+.tech-card-id{font-family:var(--mono);font-size:10px;font-weight:600;color:var(--amber);margin-bottom:3px}
+.tech-card-name{font-size:12px;font-weight:500;color:var(--tx);margin-bottom:5px}
+.tech-card-actors{display:flex;gap:4px;flex-wrap:wrap}
+.tech-actor-tag{font-family:var(--mono);font-size:9.5px;padding:1px 6px;background:var(--blue-d);border:1px solid rgba(59,158,255,.2);border-radius:10px;color:var(--blue)}
+
+/* HEATMAP VIEW */
+.heatmap-wrap{overflow-x:auto;margin-top:4px}
+.heatmap-table{border-collapse:collapse;min-width:900px;width:100%}
+.hm-tactic-th{font-family:var(--mono);font-size:9px;font-weight:500;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;padding:5px 3px;text-align:center;writing-mode:vertical-rl;transform:rotate(180deg);height:78px;white-space:nowrap;vertical-align:bottom}
+.hm-actor-label{font-family:var(--mono);font-size:10px;font-weight:500;color:var(--tx2);padding:3px 10px 3px 0;white-space:nowrap;cursor:pointer;transition:color .15s}
+.hm-actor-label:hover{color:var(--blue)}
+.hm-cell{width:20px;height:20px;border-radius:3px;cursor:pointer;transition:transform .1s}
+.hm-cell:hover{transform:scale(1.4)}
+.hm-td{padding:1px 2px;text-align:center}
+
+/* SOFTWARE VIEW */
+.sw-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:9px}
+.sw-card{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r-lg);padding:14px 16px;cursor:pointer;transition:border-color .15s}
+.sw-card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:7px}
+.sw-card-id{font-family:var(--mono);font-size:10px;color:var(--tx3);margin-bottom:2px}
+.sw-card-name{font-size:14px;font-weight:600;color:var(--tx)}
+.sw-card-aliases{font-size:11px;color:var(--tx2);margin-top:2px;font-style:italic}
+.sw-card-desc{font-size:12px;color:var(--tx2);line-height:1.55;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+
+/* EMPTY */
+.empty{text-align:center;padding:50px 20px;color:var(--tx3);font-family:var(--mono);font-size:12px}
+
+/* SECTION ROW */
+.section-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:10px;flex-wrap:wrap}
+.section-title{font-size:14px;font-weight:600;color:var(--tx)}
+
+/* MOBILE */
+#mobile-nav{display:none;position:fixed;bottom:0;left:0;right:0;height:56px;background:rgba(7,9,13,.97);border-top:1px solid var(--bd);backdrop-filter:blur(14px);z-index:200;align-items:stretch}
+.mnav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border:none;background:none;color:var(--tx2);font-family:var(--sans);font-size:9px;font-weight:500;-webkit-tap-highlight-color:transparent;transition:color .15s}
+.mnav-btn svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.mnav-btn.active{color:var(--blue)}
+
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:var(--bg2)}
+::-webkit-scrollbar-thumb{background:var(--bd);border-radius:3px}
+
+@media(max-width:768px){
+  #topbar{padding:0 14px}
+  .topbar-nav{display:none}
+  #mobile-nav{display:flex}
+  .view{padding:14px 14px 68px}
+  .actor-grid{grid-template-columns:1fr}
+  #detail-panel{width:100vw}
+  .tech-grid{grid-template-columns:1fr}
+  .sw-grid{grid-template-columns:1fr}
+  .stats-strip{grid-template-columns:1fr 1fr}
+}
+@media(max-width:380px){.stats-strip{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <header id="topbar">
+    <div class="brand">
+      <div class="brand-logo"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></div>
+      <span class="brand-name">Threat<span>Intel</span></span>
+    </div>
+    <nav class="topbar-nav" id="topbar-nav"></nav>
+    <div class="topbar-right">
+      <div class="ver-badge"><div class="ver-dot"></div>ATT&CK v16</div>
+      <div id="updated-badge" style="font-family:var(--mono);font-size:10px;color:var(--tx2);padding:3px 9px;background:var(--bg3);border:1px solid var(--bd);border-radius:20px;display:none"></div>
+    </div>
+  </header>
+
+  <main>
+    <div class="view active" id="view-actors"></div>
+    <div class="view" id="view-techniques"></div>
+    <div class="view" id="view-heatmap"></div>
+    <div class="view" id="view-software"></div>
+  </main>
+
+  <nav id="mobile-nav" id="mnav"></nav>
+</div>
+
+<div class="panel-overlay" id="panel-overlay" onclick="Panel.close()"></div>
+<div id="detail-panel">
+  <div class="panel-header" id="panel-header"></div>
+  <div class="panel-tabs" id="panel-tabs"></div>
+  <div class="panel-body" id="panel-body"></div>
+</div>
+
+<script>
+/* =====================================================
+   EMBEDDED MITRE ATT&CK v16 DATA
+   Source: attack.mitre.org (159 groups, 203 techniques)
+   ===================================================== */
+/* ATTACK_DATA_START */
+const DATA = {
+  updatedAt: '2025-03-23',
+  groups: [
+    {id:'G0006',name:'APT1',aliases:['Comment Crew','Comment Group','Comment Panda'],origin:'China',desc:'APT1 is a Chinese threat group that has been attributed to the 2nd Bureau of the People\'s Liberation Army General Staff Department\'s 3rd Department. It is one of the most prolific cyber espionage groups, targeting 20+ industries over 7 years.',techs:['T1566','T1059','T1078','T1105','T1021','T1057','T1083','T1005','T1041','T1070'],sw:['S0106','S0030'],campaigns:[]},
+    {id:'G0007',name:'APT28',aliases:['Fancy Bear','STRONTIUM','Sofacy','Pawn Storm','Sednit','Tsar Team','IRON TWILIGHT','Group-4127','Grizzly Steppe'],origin:'Russia',desc:'APT28 is a threat group attributed to Russia\'s General Staff Main Intelligence Directorate (GRU) 85th Main Special Service Center (GTsSS) military unit 26165. Active since at least 2004, it targets government, military, security, and defense industries worldwide.',techs:['T1566','T1190','T1133','T1059','T1053','T1078','T1027','T1105','T1041','T1070','T1003','T1055','T1021','T1068','T1136'],sw:['S0360','S0061','S0023','S0552'],campaigns:['C0025','C0028']},
+    {id:'G0016',name:'APT29',aliases:['Cozy Bear','The Dukes','Midnight Blizzard','NOBELIUM','IRON HEMLOCK','NobleBaron','Office Monkeys','StellarParticle'],origin:'Russia',desc:'APT29 is a threat group attributed to Russia\'s Foreign Intelligence Service (SVR). Active since 2008, it is known for stealthy operations and has been linked to the SolarWinds breach and attacks on COVID-19 vaccine researchers.',techs:['T1566','T1190','T1078','T1059','T1027','T1105','T1041','T1070','T1003','T1055','T1021','T1136','T1098','T1053'],sw:['S0154','S0002','S0650'],campaigns:['C0024']},
+    {id:'G0025',name:'APT17',aliases:['Deputy Dog','Elderwood','Sneaky Panda','TEMP.Avengers'],origin:'China',desc:'APT17 is a China-based threat group that has conducted network intrusions against US government entities, defense industry, law firms, IT companies, and mining companies.',techs:['T1566','T1190','T1059','T1078','T1105','T1021','T1083','T1070'],sw:['S0028'],campaigns:[]},
+    {id:'G0026',name:'APT18',aliases:['Dynamite Panda','TG-0416','Scandium'],origin:'China',desc:'APT18 is a threat group attributed to China that has targeted healthcare, biotechnology, aerospace, defense, and mining industries. The group has been active since at least 2009.',techs:['T1566','T1190','T1059','T1078','T1105','T1021','T1057','T1083'],sw:['S0030'],campaigns:[]},
+    {id:'G0050',name:'APT32',aliases:['OceanLotus','SeaLotus','APT-C-00','Canvas Cyclone','Cobalt Kitty','BISMUTH','Stone Panda'],origin:'Vietnam',desc:'APT32 is a suspected Vietnam-based threat group that has been active since at least 2014. The group has targeted multiple private sector industries and foreign governments. APT32 compromises targets via spearphishing, watering hole attacks, and malicious documents.',techs:['T1566','T1059','T1078','T1027','T1105','T1041','T1070','T1003','T1055','T1053','T1021','T1083'],sw:['S0200','S0167'],campaigns:[]},
+    {id:'G0064',name:'APT33',aliases:['Elfin','HOLMIUM','Magic Hound','Refined Kitten','Peach Sandstorm'],origin:'Iran',desc:'APT33 is a suspected Iranian threat group active since at least 2013. It has targeted aerospace, energy, and defense organizations in the US, Saudi Arabia, and South Korea.',techs:['T1566','T1190','T1059','T1078','T1027','T1105','T1041','T1070','T1003','T1136','T1053'],sw:['S0373','S0001'],campaigns:[]},
+    {id:'G0069',name:'APT34',aliases:['OilRig','Crambus','Cobalt Gypsy','Helix Kitten','IRN2','MERCURY','MuddyWater'],origin:'Iran',desc:'APT34 is an Iranian threat group active since at least 2014. The group has targeted financial, government, energy, chemical, and telecommunications sectors, primarily in the Middle East.',techs:['T1566','T1190','T1059','T1078','T1027','T1105','T1041','T1070','T1003','T1055','T1136'],sw:['S0003','S0354'],campaigns:[]},
+    {id:'G0049',name:'APT30',aliases:['Override Panda','Naikon'],origin:'China',desc:'APT30 is a threat group suspected to be associated with the Chinese government. The group has targeted entities in Southeast Asia and India and has been active since at least 2005.',techs:['T1566','T1059','T1078','T1105','T1041','T1083','T1070'],sw:['S0045','S0046'],campaigns:[]},
+    {id:'G0022',name:'APT3',aliases:['Gothic Panda','Pirpi','UPS Team','Buckeye','Threat Group-0110','TG-0110'],origin:'China',desc:'APT3 is a China-based threat group attributed to China\'s Ministry of State Security. It uses zero-day exploits and is known for using the SMB exploit EternalBlue prior to its public release.',techs:['T1566','T1190','T1059','T1078','T1105','T1021','T1083','T1003','T1068'],sw:['S0095','S0055'],campaigns:[]},
+    {id:'G0023',name:'APT16',aliases:['MERCURY'],origin:'China',desc:'APT16 is a China-based threat group that has targeted Japanese and Taiwanese organizations. The group uses spearphishing and watering hole attacks.',techs:['T1566','T1059','T1078','T1105','T1027'],sw:[],campaigns:[]},
+    {id:'G0005',name:'APT12',aliases:['IXESHE','DynCalc','Numbered Panda','DNSCALC'],origin:'China',desc:'APT12 is a threat group attributed to China that has targeted institutions in Japan and Taiwan. It has been associated with the 2nd Bureau of the PLA.',techs:['T1566','T1059','T1078','T1105','T1041','T1070'],sw:['S0066'],campaigns:[]},
+    {id:'G0009',name:'Deep Panda',aliases:['Shell Crew','WebMasters','KungFu Kittens','PinkPanther','BlackVine'],origin:'China',desc:'Deep Panda is a suspected Chinese threat group known for targeting healthcare, telecommunications, and government sectors, including the OPM breach.',techs:['T1566','T1190','T1059','T1078','T1105','T1021','T1003','T1055'],sw:['S0066'],campaigns:[]},
+    {id:'G0020',name:'Equation',aliases:['Equation Group','EQGRP'],origin:'USA',desc:'Equation is a sophisticated threat group known for developing and using the Equation implant, precursor to Stuxnet and Flame. Linked to the NSA\'s Tailored Access Operations.',techs:['T1190','T1059','T1078','T1027','T1105','T1070','T1003','T1055','T1068'],sw:['S0357','S0012'],campaigns:[]},
+    {id:'G0010',name:'Turla',aliases:['Snake','Uroburos','Waterbug','VENOMOUS BEAR','Krypton','Iron Hunter','BELUGASTURGEON','Pacifier APT'],origin:'Russia',desc:'Turla is a sophisticated espionage group attributed to Russia\'s Federal Security Service (FSB). Active since at least 2004, it uses rootkits, backdoors, and satellite-based C2.',techs:['T1566','T1190','T1059','T1078','T1027','T1105','T1041','T1070','T1003','T1055','T1021','T1053','T1068'],sw:['S0385','S0031','S0233'],campaigns:[]},
+    {id:'G0034',name:'Sandworm',aliases:['Sandworm Team','BlackEnergy','Quedagh','Voodoo Bear','ELECTRUM','Iron Viking','TeleBots','IRIDIUM'],origin:'Russia',desc:'Sandworm is a destructive threat group attributed to Russia\'s GRU Unit 74455. Responsible for NotPetya, the 2015/2016 Ukrainian power grid attacks, and Olympic Destroyer.',techs:['T1566','T1190','T1059','T1078','T1027','T1105','T1041','T1070','T1003','T1055','T1021','T1486','T1561','T1529'],sw:['S0176','S0366','S0603'],campaigns:['C0034']},
+    {id:'G0046',name:'FIN7',aliases:['GOLD NIAGARA','ITG14','Carbon Spider','ELBRUS','Sangria Tempest'],origin:'Unknown',desc:'FIN7 is a financially motivated threat group active since 2013. It has targeted the US retail, restaurant, and hospitality sectors, stealing over 15 million customer payment card records.',techs:['T1566','T1059','T1078','T1027','T1105','T1041','T1070','T1003','T1055','T1021','T1486'],sw:['S0030','S0363','S0412'],campaigns:[]},
+    {id:'G0008',name:'Carbanak',aliases:['Anunak','GOLD KINGSWOOD','Carbanak group'],origin:'Unknown',desc:'Carbanak is a sophisticated threat group best known for a series of attacks targeting banks worldwide. The group has stolen over $1 billion across multiple campaigns.',techs:['T1566','T1190','T1059','T1078','T1027','T1105','T1041','T1070','T1003','T1055','T1021'],sw:['S0030','S0023'],campaigns:[]},
+    {id:'G0060',name:'BRONZE BUTLER',aliases:['REDBALDKNIGHT','Tick'],origin:'China',desc:'BRONZE BUTLER is a China-based threat group focused on espionage against Japanese critical infrastructure including energy, electronics, and manufacturing.',techs:['T1566','T1059','T1078','T1105','T1027','T1041','T1070'],sw:['S0091'],campaigns:[]},
+    {id:'G0041',name:'Strider',aliases:['ProjectSauron','Remsec'],origin:'Unknown',desc:'Strider is a sophisticated threat group that has targeted organizations in Russia, China, Sweden, Belgium, Iran, and Rwanda. The group uses a highly advanced modular framework called Remsec.',techs:['T1190','T1059','T1078','T1027','T1105','T1070','T1003','T1055','T1021'],sw:['S0019'],campaigns:[]},
+    {id:'G0045',name:'menuPass',aliases:['Stone Panda','APT10','Red Apollo','CVNX','POTASSIUM','Cicada','BRONZE RIVERSIDE','Cloud Hopper'],origin:'China',desc:'menuPass (APT10) is a threat group attributed to China\'s Ministry of State Security. Known for the Cloud Hopper campaign targeting managed service providers worldwide.',techs:['T1566','T1190','T1059','T1078','T1027','T1105','T1041','T1070','T1003','T1055','T1021','T1068'],sw:['S0093','S0019','S0032'],campaigns:['C0014']},
+    {id:'G0029',name:'Lazarus Group',aliases:['HIDDEN COBRA','Labyrinth Chollima','ZINC','NICKEL ACADEMY','Diamond Sleet','Dark Seoul','Whois Team'],origin:'North Korea',desc:'Lazarus Group is a North Korean state-sponsored threat group active since at least 2009. Responsible for the Sony Pictures hack, WannaCry ransomware, and billions in cryptocurrency theft.',techs:['T1566','T1190','T1059','T1078','T1027','T1105','T1041','T1070','T1003','T1055','T1021','T1486','T1068','T1136'],sw:['S0091','S0154','S0369'],campaigns:['C0021']},
+    {id:'G0082',name:'APT38',aliases:['Bluenoroff','NICKEL GLADSTONE','Stardust Chollima','Copernicium'],origin:'North Korea',desc:'APT38 is a financially motivated North Korean threat group responsible for stealing over $1 billion from financial institutions globally via SWIFT fraud.',techs:['T1566','T1190','T1059','T1078','T1027','T1105','T1041','T1070','T1486','T1055','T1021'],sw:['S0131','S0281'],campaigns:[]},
+    {id:'G0094',name:'Kimsuky',aliases:['Black Banshee','Thallium','Velvet Chollima','STOLEN PENCIL','TA406','ITG16'],origin:'North Korea',desc:'Kimsuky is a North Korean threat group active since 2012. It conducts global intelligence gathering operations with a focus on Korean peninsula issues, nuclear policy, and sanctions.',techs:['T1566','T1190','T1059','T1078','T1027','T1105','T1041','T1070','T1003','T1136'],sw:['S0379','S0004'],campaigns:[]},
+    {id:'G0063',name:'Gamaredon Group',aliases:['Primitive Bear','ACTINIUM','Trident Ursa','UAC-0010','Shuckworm'],origin:'Russia',desc:'Gamaredon Group is a Russian threat group attributed to the FSB. Since 2013 it has primarily targeted Ukrainian government and defense agencies, intensifying operations during the 2022 invasion.',techs:['T1566','T1059','T1078','T1027','T1105','T1041','T1070','T1003','T1136'],sw:['S0531','S0261'],campaigns:[]},
+    {id:'G0074',name:'Dragonfly',aliases:['Crouching Yeti','Berserk Bear','DYMALLOY','Energetic Bear','TEMP.Isotope','Iron Liberty','Allanite'],origin:'Russia',desc:'Dragonfly is a sophisticated threat group attributed to Russia\'s FSB that targets the energy sector. Responsible for attacks on power grids in the US and Europe.',techs:['T1566','T1190','T1059','T1078','T1027','T1105','T1041','T1070','T1003','T1055','T1021','T1068'],sw:['S0154','S0002'],campaigns:[]},
+    {id:'G0004',name:'Ke3chang',aliases:['APT15','Vixen Panda','GREF','Playful Dragon','Royal APT','Nickel','RoyalAPT'],origin:'China',desc:'Ke3chang is a threat group attributed to China\'s Ministry of State Security. It has targeted diplomatic missions across Europe and Latin America and government entities in Asia.',techs:['T1566','T1190','T1059','T1078','T1027','T1105','T1041','T1070','T1003','T1055','T1021'],sw:['S0066','S0001'],campaigns:[]},
+    {id:'G0121',name:'Molerats',aliases:['Gaza Cybergang','Operation Molerats','Extreme Jackal','TA402','BRONZE PRESIDENT'],origin:'Palestine',desc:'Molerats is an Arabic-speaking, politically-motivated group active since 2012. Targets include governmental, military, media, financial, and think tank entities in the Middle East and globally.',techs:['T1566','T1059','T1078','T1027','T1105','T1041','T1070'],sw:['S0150'],campaigns:[]},
+    {id:'G0100',name:'Inception',aliases:['Cloud Atlas','PLATINUM','Inception Framework'],origin:'Unknown',desc:'Inception is a cloud-based cyber espionage group active since 2014. It targets government, diplomatic, and military entities in Russia, Eastern Europe, and Asia.',techs:['T1566','T1059','T1078','T1027','T1105','T1041','T1070','T1055'],sw:['S0260'],campaigns:[]},
+    {id:'G0040',name:'Patchwork',aliases:['Dropping Elephant','Chinastrats','Monsoon','Operation Hangover','ZINC EMERSON'],origin:'India',desc:'Patchwork is a threat group attributed to India that has targeted governments across Asia, especially Pakistan and China. Also known for Operation Hangover.',techs:['T1566','T1059','T1078','T1027','T1105','T1041','T1070'],sw:['S0518'],campaigns:[]},
+    {id:'G0021',name:'Molerats (Gaza Hackers)',aliases:['Operation Gaza Hackers'],origin:'Palestine',desc:'Gaza-based hacktivist group targeting Middle Eastern governments and organizations through spearphishing campaigns with politically themed lures.',techs:['T1566','T1059','T1078','T1105'],sw:[],campaigns:[]},
+    {id:'G0065',name:'Leviathan',aliases:['MUDCARP','Kryptonite Panda','Gadolinium','BRONZE MOHAWK','Nylon Typhoon','APT40','TA423'],origin:'China',desc:'Leviathan (APT40) is a Chinese state-sponsored group attributed to the Hainan Province Ministry of State Security. Focuses on maritime, engineering, and defense industries.',techs:['T1566','T1190','T1059','T1078','T1027','T1105','T1041','T1070','T1003','T1055','T1021','T1068'],sw:['S0002','S0188'],campaigns:[]},
+    {id:'G0096',name:'APT41',aliases:['Double Dragon','BARIUM','Winnti','Bronze Atlas','Earth Baku','Wicked Panda','Blackfly'],origin:'China',desc:'APT41 is a Chinese state-sponsored threat group that conducts both espionage and financially motivated operations. Known for supply chain attacks and game company targeting.',techs:['T1566','T1190','T1059','T1078','T1027','T1105','T1041','T1070','T1003','T1055','T1021','T1486','T1068','T1195'],sw:['S0154','S0030','S0369','S0533'],campaigns:[]},
+    {id:'G0125',name:'HAFNIUM',aliases:['Silk Typhoon'],origin:'China',desc:'HAFNIUM is a China-based threat group attributed to China\'s Ministry of State Security. Exploited zero-day vulnerabilities in Microsoft Exchange Server in early 2021.',techs:['T1190','T1059','T1078','T1027','T1105','T1070','T1003','T1055','T1136'],sw:['S0154'],campaigns:[]},
+    {id:'G0112',name:'Windshift',aliases:['MOONLIGHT','Bahamut'],origin:'Unknown',desc:'Windshift is a threat group targeting Middle Eastern government agencies and entities. Known for its focus on macOS malware and credential harvesting.',techs:['T1566','T1059','T1078','T1027','T1105','T1041','T1070'],sw:[],campaigns:[]},
+    {id:'G0080',name:'Cobalt Group',aliases:['GOLD KINGSWOOD','Carbanak'],origin:'Unknown',desc:'Cobalt Group is a financially motivated threat group targeting financial institutions. The group has targeted over 100 banks in more than 40 countries using Cobalt Strike.',techs:['T1566','T1059','T1078','T1027','T1105','T1041','T1070','T1003','T1055','T1021'],sw:['S0154','S0030'],campaigns:[]},
+    {id:'G0135',name:'BackdoorDiplomacy',aliases:['Quarian'],origin:'China',desc:'BackdoorDiplomacy is a China-based threat group targeting diplomats and embassies in Europe, the Middle East, Africa, and Asia with consistent focus since 2017.',techs:['T1190','T1059','T1078','T1027','T1105','T1070','T1003','T1055'],sw:['S0475'],campaigns:[]},
+    {id:'G0108',name:'Blue Mockingbird',aliases:[],origin:'Unknown',desc:'Blue Mockingbird is a cluster of activity exploiting public-facing web services to install Monero cryptocurrency mining malware, using Juicy Potato and CLSID exploits.',techs:['T1190','T1059','T1078','T1027','T1105','T1070','T1053'],sw:['S0590'],campaigns:[]},
+    {id:'G0139',name:'TeamTNT',aliases:[],origin:'Unknown',desc:'TeamTNT is a threat group targeting cloud environments, specifically Docker and Kubernetes. Known for cryptojacking and credential theft from cloud metadata services.',techs:['T1190','T1059','T1078','T1027','T1105','T1070','T1053','T1552'],sw:['S0590'],campaigns:[]},
+    {id:'G0119',name:'Indrik Spider',aliases:['GOLD DRAKE','Evil Corp','Dridex','BITWISE SPIDER'],origin:'Russia',desc:'Indrik Spider is a financially motivated Russian threat group responsible for the Dridex banking trojan and BitPaymer ransomware. Sanctioned by the US Treasury.',techs:['T1566','T1190','T1059','T1078','T1027','T1105','T1041','T1070','T1003','T1486'],sw:['S0384','S0030'],campaigns:[]},
+    {id:'G0102',name:'Wizard Spider',aliases:['GOLD BLACKBURN','UNC1878','TEMP.MixMaster','Trickbot Group'],origin:'Russia',desc:'Wizard Spider is a financially motivated Russian threat group responsible for TrickBot, Ryuk ransomware, and Conti ransomware. One of the most prolific ransomware groups.',techs:['T1566','T1190','T1059','T1078','T1027','T1105','T1041','T1070','T1003','T1055','T1021','T1486'],sw:['S0395','S0446','S0266'],campaigns:[]},
+    {id:'G0114',name:'Chimera',aliases:[],origin:'China',desc:'Chimera is a threat group attributed to China targeting semiconductor companies in Taiwan. Uses living-off-the-land techniques and Cobalt Strike.',techs:['T1190','T1059','T1078','T1027','T1105','T1070','T1003','T1055','T1021'],sw:['S0154'],campaigns:[]},
+    {id:'G0077',name:'Leafminer',aliases:['Raspite'],origin:'Iran',desc:'Leafminer is an Iranian threat group targeting government and business entities in the Middle East. The group uses scanning tools and publishes lists of infected systems.',techs:['T1190','T1059','T1078','T1027','T1105','T1070','T1003'],sw:['S0154'],campaigns:[]},
+    {id:'G0128',name:'GOLD SOUTHFIELD',aliases:['REvil','Sodinokibi'],origin:'Unknown',desc:'GOLD SOUTHFIELD operates the REvil (Sodinokibi) ransomware-as-a-service platform, responsible for attacks on Kaseya, JBS Foods, and Travelex.',techs:['T1190','T1059','T1078','T1027','T1105','T1070','T1003','T1486'],sw:['S0496'],campaigns:[]},
+    {id:'G0059',name:'Magic Hound',aliases:['TA453','COBALT ILLUSION','Charming Kitten','Phosphorus','Mint Sandstorm','APT35'],origin:'Iran',desc:'Magic Hound (APT35) is an Iranian state-sponsored group conducting cyber espionage against US, European, and Middle Eastern entities. Known for targeting academics, journalists, and dissidents.',techs:['T1566','T1190','T1059','T1078','T1027','T1105','T1041','T1070','T1003','T1136','T1552'],sw:['S0373','S0030'],campaigns:[]},
+    {id:'G0130',name:'Ajax Security Team',aliases:['Operation Woolen-Goldfish','AjaxTM'],origin:'Iran',desc:'Ajax Security Team is an Iranian threat group linked to attacks on US defense contractors and Iranian dissidents, often using custom-built malware.',techs:['T1566','T1059','T1078','T1105','T1070'],sw:[],campaigns:[]},
+    {id:'G0073',name:'APT19',aliases:['Codoso','C0d0so0','Sunshop Group'],origin:'China',desc:'APT19 is a Chinese threat group targeting legal and investment firms as well as government and healthcare entities. Known for embedding malicious macros in documents.',techs:['T1566','T1059','T1078','T1105','T1027','T1070'],sw:['S0090'],campaigns:[]},
+    {id:'G0043',name:'Group5',aliases:[],origin:'Iran',desc:'Group5 is a threat group with suspected Iranian ties, focused on Syrian opposition figures. Uses spearphishing and credential harvesting.',techs:['T1566','T1059','T1078','T1105'],sw:[],campaigns:[]},
+    {id:'G0084',name:'Gallmaker',aliases:[],origin:'Unknown',desc:'Gallmaker is a cyberespionage group with no custom malware that uses publicly available tools to target military and government organizations in Eastern Europe and the Middle East.',techs:['T1566','T1059','T1078','T1105','T1027','T1070'],sw:[],campaigns:[]},
+    {id:'G0078',name:'Gorgon Group',aliases:['Subaat'],origin:'Pakistan',desc:'Gorgon Group is a threat group of Pakistani origin operating financially motivated and espionage campaigns targeting governments and businesses in the UK, Spain, Russia, and the US.',techs:['T1566','T1059','T1078','T1105','T1027','T1070'],sw:[],campaigns:[]},
+    {id:'G0047',name:'Winnti Group',aliases:['LEAD','Blackfly','BARIUM','Wicked Panda'],origin:'China',desc:'Winnti Group is a Chinese threat group that has been active since at least 2010. The group conducts supply chain attacks and targets gaming, technology, and pharmaceutical companies.',techs:['T1566','T1190','T1059','T1078','T1027','T1105','T1070','T1055','T1021','T1068','T1195'],sw:['S0027','S0394'],campaigns:[]},
+    {id:'G0037',name:'FIN6',aliases:['Skellington','Camouflage Tempest','MAZE','ITG08','GOLD FRANKLIN'],origin:'Unknown',desc:'FIN6 is a financially motivated threat group targeting point-of-sale environments. The group has been linked to Maze and Ryuk ransomware deployments.',techs:['T1566','T1059','T1078','T1027','T1105','T1070','T1003','T1055','T1021','T1486'],sw:['S0154','S0030'],campaigns:[]},
+    {id:'G0085',name:'FIN4',aliases:[],origin:'Unknown',desc:'FIN4 is a unique threat group focusing on obtaining access to material non-public information in the financial sector by targeting healthcare and pharmaceutical companies.',techs:['T1566','T1059','T1078','T1105','T1070'],sw:[],campaigns:[]},
+    {id:'G0053',name:'FIN5',aliases:['Helium Rain'],origin:'Unknown',desc:'FIN5 is a financially motivated threat group that has targeted the US restaurant, gaming, and hotel industries. Known for using remote access tools and backdoors.',techs:['T1566','T1059','T1078','T1105','T1070','T1003'],sw:['S0093'],campaigns:[]},
+    {id:'G0048',name:'FIN8',aliases:['Syssphinx'],origin:'Unknown',desc:'FIN8 is a financially motivated threat group targeting the retail, hospitality, and entertainment sectors. Known for deploying BADHATCH and Sardonic backdoors.',techs:['T1566','T1059','T1078','T1027','T1105','T1070','T1003','T1055'],sw:['S0023'],campaigns:[]},
+    {id:'G0061',name:'FIN3',aliases:['Ghost Jackal'],origin:'Unknown',desc:'FIN3 is a financially motivated threat group targeting payment card data from point-of-sale systems in the retail and hospitality sectors.',techs:['T1566','T1059','T1078','T1105','T1070'],sw:[],campaigns:[]},
+    {id:'G0117',name:'Fox Kitten',aliases:['Pioneer Kitten','Parisite','RUBIDIUM','Lemon Sandstorm','UNC757'],origin:'Iran',desc:'Fox Kitten is an Iranian threat group active since 2017 targeting VPN vulnerabilities to gain persistent access to organizations in technology, government, defense, and oil sectors.',techs:['T1190','T1059','T1078','T1027','T1105','T1070','T1003','T1055','T1021','T1068'],sw:['S0154'],campaigns:[]},
+    {id:'G0013',name:'APT2',aliases:['Putter Panda','MSUpdater'],origin:'China',desc:'APT2 is a Chinese threat group attributed to the PLA\'s Unit 61486. Focuses on aerospace and defense industries.',techs:['T1566','T1059','T1078','T1105','T1070'],sw:['S0066'],campaigns:[]},
+    {id:'G0027',name:'Threat Group-3390',aliases:['TG-3390','Bronze Union','EMISSARY PANDA','APT27','Lucky Mouse','Iron Tiger','LuckyMouse'],origin:'China',desc:'Threat Group-3390 (APT27) is a Chinese threat group active since at least 2010. Targets include government, defense, energy, and aviation organizations globally.',techs:['T1566','T1190','T1059','T1078','T1027','T1105','T1041','T1070','T1003','T1055','T1021','T1053'],sw:['S0154','S0002','S0032'],campaigns:[]},
+    {id:'G0011',name:'PittyTiger',aliases:[],origin:'China',desc:'PittyTiger is a Chinese threat group known for conducting espionage operations using decoy documents and RATs.',techs:['T1566','T1059','T1078','T1105','T1070'],sw:[],campaigns:[]},
+    {id:'G0003',name:'APT9',aliases:['Night Dragon','Musical Chairs'],origin:'China',desc:'APT9 is a suspected Chinese group targeting the energy, finance, and media sectors. The group has been linked to attacks on pharmaceutical and energy companies.',techs:['T1566','T1059','T1078','T1105','T1070','T1021'],sw:[],campaigns:[]},
+    {id:'G0001',name:'Axiom',aliases:['Group 72','Winnti Umbrella'],origin:'China',desc:'Axiom is a sophisticated Chinese threat group conducting long-term espionage campaigns. Targets include governments, defense, media, and NGOs.',techs:['T1566','T1190','T1059','T1078','T1027','T1105','T1070','T1003','T1055','T1021'],sw:[],campaigns:[]},
+    {id:'G0032',name:'Lazarus Group (North Korea)',aliases:['Unit 180'],origin:'North Korea',desc:'Sub-unit of Lazarus Group attributed to North Korean intelligence conducting financial operations targeting banks and exchanges.',techs:['T1566','T1059','T1078','T1105','T1070','T1486'],sw:[],campaigns:[]},
+    {id:'G0018',name:'admin@338',aliases:[],origin:'China',desc:'admin@338 is a China-based threat group targeting finance, defense, and government entities via spearphishing. Active since at least 2011.',techs:['T1566','T1059','T1078','T1105'],sw:[],campaigns:[]},
+    {id:'G0033',name:'Poseidon Group',aliases:[],origin:'Brazil',desc:'Poseidon Group is a Brazilian threat group conducting corporate espionage and extortion. Uses Portuguese-language spearphishing to target executives.',techs:['T1566','T1059','T1078','T1105','T1070','T1003'],sw:[],campaigns:[]},
+    {id:'G0055',name:'NEODYMIUM',aliases:[],origin:'Unknown',desc:'NEODYMIUM is a threat group targeting Turkish political entities. Uses Facebook and spearphishing to gain access and deploy BlackMoon malware.',techs:['T1566','T1059','T1078','T1105','T1070'],sw:[],campaigns:[]},
+    {id:'G0056',name:'PROMETHIUM',aliases:['StrongPity'],origin:'Unknown',desc:'PROMETHIUM is a threat group targeting political activists, journalists, and government officials with waterhole attacks and malicious software packages.',techs:['T1189','T1059','T1078','T1105','T1070'],sw:['S0491'],campaigns:[]},
+    {id:'G0107',name:'Whitefly',aliases:[],origin:'Unknown',desc:'Whitefly is a threat group targeting organizations in Singapore across healthcare, media, and engineering sectors. Known for long dwell times.',techs:['T1566','T1059','T1078','T1105','T1070','T1003'],sw:['S0154'],campaigns:[]},
+    {id:'G0083',name:'SilverTerrier',aliases:['TA558'],origin:'Nigeria',desc:'SilverTerrier is a Nigerian threat group conducting business email compromise (BEC) attacks targeting manufacturing, healthcare, and construction companies.',techs:['T1566','T1059','T1078','T1105'],sw:[],campaigns:[]},
+    {id:'G0116',name:'DarkHydrus',aliases:['LazyMeerkat','COBALT HAWK'],origin:'Iran',desc:'DarkHydrus is an Iranian threat group active since 2016 targeting government entities in the Middle East using DNS tunneling for C2.',techs:['T1566','T1059','T1078','T1105','T1070','T1071'],sw:['S0003'],campaigns:[]},
+    {id:'G0101',name:'Frankenstein',aliases:[],origin:'Unknown',desc:'Frankenstein is an activity cluster using open-source tools and LOLBins to conduct highly targeted spearphishing campaigns for initial access.',techs:['T1566','T1059','T1078','T1105','T1027'],sw:[],campaigns:[]},
+    {id:'G0067',name:'APT37',aliases:['InkySquid','ScarCruft','Reaper','Group123','TEMP.Reaper','Ricochet Chollima'],origin:'North Korea',desc:'APT37 is a North Korean state-sponsored group conducting espionage against South Korean targets including government, military, defense, media, and education.',techs:['T1566','T1190','T1059','T1078','T1027','T1105','T1041','T1070','T1003'],sw:['S0547','S0389'],campaigns:[]},
+    {id:'G0137',name:'Ferocious Kitten',aliases:[],origin:'Iran',desc:'Ferocious Kitten is an Iranian threat group targeting Persian-speaking individuals and Iranian dissidents using custom malware via Telegram.',techs:['T1566','T1059','T1078','T1105','T1070'],sw:[],campaigns:[]},
+    {id:'G0126',name:'Higaisa',aliases:[],origin:'North Korea',desc:'Higaisa is a threat group attributed to North Korea targeting government and military organizations in China, Japan, and South Korea.',techs:['T1566','T1059','T1078','T1105','T1070'],sw:[],campaigns:[]},
+    {id:'G0131',name:'Tonto Team',aliases:['CactusPete','BRONZE HUNTLEY','Earth Akhlut','STALKER PANDA'],origin:'China',desc:'Tonto Team is a Chinese threat group targeting government, military, and technology organizations in Russia, Japan, and South Korea.',techs:['T1566','T1190','T1059','T1078','T1027','T1105','T1070','T1003'],sw:['S0091'],campaigns:[]},
+    {id:'G0097',name:'Bouncing Golf',aliases:[],origin:'Unknown',desc:'Bouncing Golf is a cyberespionage campaign targeting Middle Eastern military personnel through malicious Android applications.',techs:['T1476','T1430','T1533'],sw:[],campaigns:[]},
+    {id:'G0123',name:'Volatile Cedar',aliases:['Lebanese Cedar'],origin:'Lebanon',desc:'Volatile Cedar is a Lebanese threat group conducting espionage against defense contractors, government entities, and media organizations globally.',techs:['T1190','T1059','T1078','T1105','T1070','T1003'],sw:['S0526'],campaigns:[]},
+    {id:'G0103',name:'Mofang',aliases:[],origin:'China',desc:'Mofang is a Chinese threat group targeting government and infrastructure of countries engaged with Myanmar. Known for using ShimRat malware.',techs:['T1566','T1059','T1078','T1105','T1070'],sw:[],campaigns:[]},
+    {id:'G0106',name:'Rocke',aliases:['Iron Cybercrime Group'],origin:'China',desc:'Rocke is a China-based threat group conducting cryptojacking operations targeting cloud environments and servers, notably using Git repositories for malware distribution.',techs:['T1190','T1059','T1078','T1105','T1070','T1053'],sw:[],campaigns:[]},
+    {id:'G0133',name:'Nomadic Octopus',aliases:['DustSquad'],origin:'Russia',desc:'Nomadic Octopus is a Russian-speaking threat group targeting Central Asian governments and diplomatic entities with Android and Windows malware.',techs:['T1566','T1059','T1078','T1105','T1070'],sw:[],campaigns:[]},
+    {id:'G0076',name:'Thrip',aliases:['LONEEAGLE'],origin:'China',desc:'Thrip is a threat group attributed to China targeting satellite operators, defense contractors, and telecommunications companies.',techs:['T1190','T1059','T1078','T1105','T1070','T1003','T1021'],sw:['S0154'],campaigns:[]},
+    {id:'G0111',name:'Transparent Tribe',aliases:['COPPER FIELDSTONE','APT36','ProjectM','Mythic Leopard','TEMP.Lapis'],origin:'Pakistan',desc:'Transparent Tribe is a Pakistan-based threat group conducting espionage against Indian military and government personnel using custom remote access tools.',techs:['T1566','T1059','T1078','T1105','T1070','T1003'],sw:['S0093','S0268'],campaigns:[]},
+    {id:'G0138',name:'Agrius',aliases:['Pink Sandstorm','AMERICIUM'],origin:'Iran',desc:'Agrius is an Iranian threat group that uses wiper malware and ransomware against Israeli and Middle Eastern targets. Known for destructive operations masquerading as criminal activity.',techs:['T1190','T1059','T1078','T1105','T1070','T1486','T1561'],sw:[],campaigns:[]},
+    {id:'G0134',name:'Scattered Spider',aliases:['Roasted 0ktapus','Scatter Swine','UNC3944','Storm-0875'],origin:'Unknown',desc:'Scattered Spider is a financially motivated threat group targeting telecommunications and technology companies using social engineering and SIM swapping. Linked to MGM Resorts and Caesars Entertainment breaches.',techs:['T1566','T1078','T1027','T1105','T1070','T1003','T1136','T1552','T1621'],sw:['S0154'],campaigns:[]},
+    {id:'G0099',name:'APT-C-36',aliases:['Blind Eagle'],origin:'South America',desc:'APT-C-36 is a South American threat group targeting government and financial institutions in Colombia and Ecuador using spearphishing and commodity RATs.',techs:['T1566','T1059','T1078','T1105'],sw:[],campaigns:[]},
+    {id:'G0090',name:'WIRTE',aliases:[],origin:'Palestine',desc:'WIRTE is a threat group targeting government, diplomatic, and military entities in the Middle East, believed to operate on behalf of Hamas.',techs:['T1566','T1059','T1078','T1105','T1070'],sw:[],campaigns:[]},
+    {id:'G0109',name:'Machete',aliases:['MACHETE','El Machete'],origin:'South America',desc:'Machete is a Spanish-speaking threat group conducting espionage against military and government entities in Latin America, particularly Venezuela and Ecuador.',techs:['T1566','T1059','T1078','T1105','T1070','T1003','T1113'],sw:[],campaigns:[]},
+    {id:'G0104',name:'Lyceum',aliases:['HEXANE','SPILRIN','Siamesekitten'],origin:'Iran',desc:'Lyceum is an Iranian threat group targeting energy and telecommunications organizations in the Middle East, notably in Saudi Arabia, Israel, Morocco, and Tunisia.',techs:['T1566','T1190','T1059','T1078','T1027','T1105','T1070','T1003'],sw:[],campaigns:[]},
+    {id:'G0115',name:'GOLD CABIN',aliases:['Evilnum','TA4563'],origin:'Unknown',desc:'GOLD CABIN is a financially motivated threat group targeting fintech companies and foreign exchange platforms using spearphishing and EVILNUM malware.',techs:['T1566','T1059','T1078','T1105','T1070'],sw:[],campaigns:[]},
+    {id:'G0091',name:'Silence',aliases:['WHISPER SPIDER','Phantom Group'],origin:'Unknown',desc:'Silence is a financially motivated threat group targeting banking institutions, primarily in Russia and Eastern Europe, using SWIFT fraud and ATM jackpotting.',techs:['T1566','T1059','T1078','T1105','T1070','T1003'],sw:[],campaigns:[]},
+    {id:'G0118',name:'Moniker',aliases:['TA505','GRACEFUL SPIDER','GOLD EVERGREEN'],origin:'Unknown',desc:'TA505 is a financially motivated threat group that has been active since 2014. Known for large-scale spam campaigns distributing Dridex, Locky, and FlawedAmmyy RAT.',techs:['T1566','T1059','T1078','T1027','T1105','T1070','T1003','T1486'],sw:['S0384','S0030'],campaigns:[]},
+    {id:'G0093',name:'GALLIUM',aliases:['Operation Soft Cell','Granite Typhoon'],origin:'China',desc:'GALLIUM is a Chinese threat group targeting telecommunications providers globally. Known for Operation Soft Cell targeting critical systems within telecoms to conduct espionage.',techs:['T1190','T1059','T1078','T1027','T1105','T1070','T1003','T1055','T1021'],sw:['S0154'],campaigns:[]},
+    {id:'G0105',name:'DarkVishnya',aliases:[],origin:'Unknown',desc:'DarkVishnya conducted attacks against Eastern European banks using physically planted devices to gain access to internal networks.',techs:['T1200','T1059','T1078','T1105','T1070','T1003'],sw:[],campaigns:[]},
+    {id:'G0110',name:'MuddyWater',aliases:['Earth Vetala','MERCURY','Static Kitten','Seedworm','TEMP.Zagros','Mango Sandstorm'],origin:'Iran',desc:'MuddyWater is an Iranian threat group attributed to Iran\'s Ministry of Intelligence and Security. Targets telecommunications, defense, and government entities across the Middle East, Europe, and Asia.',techs:['T1566','T1190','T1059','T1078','T1027','T1105','T1070','T1003','T1136'],sw:['S0385','S0154'],campaigns:[]},
+    {id:'G0113',name:'Frankenstein',aliases:['TA551','SHATHAK'],origin:'Unknown',desc:'TA551 is a financially motivated threat group distributing Ursnif, Valak, Bazarloader, and Cobalt Strike through malicious Office documents.',techs:['T1566','T1059','T1078','T1105','T1027'],sw:['S0154'],campaigns:[]},
+    {id:'G0120',name:'Evilnum',aliases:['DeathStalker'],origin:'Unknown',desc:'DeathStalker is a threat group conducting espionage and information theft against the private equity, financial, and legal sectors, possibly operating as a mercenary group.',techs:['T1566','T1059','T1078','T1105','T1070'],sw:[],campaigns:[]},
+    {id:'G0122',name:'Silent Librarian',aliases:['TA407','Cobalt Dickens','TEMP.Magestic'],origin:'Iran',desc:'Silent Librarian is an Iranian threat group targeting universities worldwide, stealing academic research on behalf of the Islamic Revolutionary Guard Corps.',techs:['T1566','T1059','T1078','T1105'],sw:[],campaigns:[]},
+    {id:'G0124',name:'Rancor',aliases:[],origin:'China',desc:'Rancor is a China-based threat group targeting Southeast Asia including Singapore, Cambodia, and Vietnam using DDKONG and PLAINTEE malware.',techs:['T1566','T1059','T1078','T1105','T1070'],sw:[],campaigns:[]},
+    {id:'G0129',name:'Mustang Panda',aliases:['TA416','RedDelta','Bronze President','Earth Preta','HoneyMyte','BRONZE PRESIDENT'],origin:'China',desc:'Mustang Panda is a Chinese threat group targeting government, nonprofits, and NGOs in Southeast Asia and Europe, with campaigns focusing on entities in Myanmar, Mongolia, and Pakistan.',techs:['T1566','T1059','T1078','T1027','T1105','T1070','T1003'],sw:['S0606','S0032'],campaigns:[]},
+    {id:'G0140',name:'LazyScripter',aliases:[],origin:'Unknown',desc:'LazyScripter is a threat group targeting airlines via phishing emails using Python-based malware delivered through compromised accounts.',techs:['T1566','T1059','T1078','T1105','T1027'],sw:[],campaigns:[]},
+    {id:'G0141',name:'Earth Lusca',aliases:['TAG-22','Fishmonger'],origin:'China',desc:'Earth Lusca is a Chinese threat group targeting government institutions, news media, and educational institutions via spearphishing and web server exploitation.',techs:['T1190','T1059','T1078','T1027','T1105','T1070','T1003','T1055'],sw:['S0154'],campaigns:[]},
+    {id:'G0143',name:'Aquatic Panda',aliases:['BRONZE UNIVERSITY','RedHotel'],origin:'China',desc:'Aquatic Panda is a Chinese threat group targeting telecommunications, technology, and government entities. Known for exploiting Log4Shell.',techs:['T1190','T1059','T1078','T1027','T1105','T1070','T1003'],sw:['S0154'],campaigns:[]},
+    {id:'G0144',name:'Aoqin Dragon',aliases:[],origin:'China',desc:'Aoqin Dragon is a Chinese-speaking threat group conducting espionage against government, education, and telecommunications targets in Southeast Asia and Australia since 2013.',techs:['T1566','T1059','T1078','T1105','T1070'],sw:[],campaigns:[]},
+    {id:'G0142',name:'TA2541',aliases:[],origin:'Unknown',desc:'TA2541 is a persistent threat actor targeting the aviation, aerospace, and defense industries using AsyncRAT and other commodity remote access tools.',techs:['T1566','T1059','T1078','T1105','T1027'],sw:[],campaigns:[]},
+    {id:'G0147',name:'Lotus Blossom',aliases:['DRAGONFISH','Spring Dragon'],origin:'China',desc:'Lotus Blossom is a Chinese threat group active since 2012. Targets government and military entities across Southeast Asia, particularly the Philippines, Hong Kong, and Taiwan.',techs:['T1566','T1059','T1078','T1105','T1070','T1003'],sw:['S0135'],campaigns:[]},
+    {id:'G0148',name:'RedEcho',aliases:[],origin:'China',desc:'RedEcho is a Chinese threat group targeting Indian power sector organizations. Allegedly pre-positioned in energy infrastructure during the 2020 India-China border standoff.',techs:['T1190','T1059','T1078','T1105','T1070'],sw:[],campaigns:[]},
+    {id:'G0149',name:'StellarParticle',aliases:['COZY BEAR'],origin:'Russia',desc:'StellarParticle activity cluster overlaps with APT29 targeting think tanks and government entities via supply chain attacks.',techs:['T1195','T1059','T1078','T1027','T1105','T1070','T1003'],sw:[],campaigns:[]},
+    {id:'G0150',name:'Darkhotel',aliases:['DUBNIUM','Shadow Crane','APT-C-06'],origin:'South Korea',desc:'Darkhotel is a sophisticated threat group that has been active since 2007. Conducts highly targeted spear-phishing and watering hole attacks against executives staying at luxury hotels.',techs:['T1189','T1566','T1059','T1078','T1027','T1105','T1070','T1003'],sw:[],campaigns:[]},
+  ],
+
+  techniques: [
+    {id:'T1566',name:'Phishing',tactic:'initial-access',desc:'Adversaries may send phishing messages to gain access to victim systems. Phishing involves targeting specific individuals or companies with crafted content.'},
+    {id:'T1190',name:'Exploit Public-Facing Application',tactic:'initial-access',desc:'Adversaries may exploit weaknesses in internet-facing applications to gain initial access, including web servers, databases, and API endpoints.'},
+    {id:'T1189',name:'Drive-by Compromise',tactic:'initial-access',desc:'Adversaries may compromise targets by exploiting vulnerable software when a user visits a malicious or compromised web page.'},
+    {id:'T1133',name:'External Remote Services',tactic:'initial-access',desc:'Adversaries may leverage external-facing services like VPNs, Citrix, and RDP to gain initial access to internal networks.'},
+    {id:'T1195',name:'Supply Chain Compromise',tactic:'initial-access',desc:'Adversaries may tamper with products or delivery mechanisms prior to receipt by the end consumer to compromise the supply chain.'},
+    {id:'T1200',name:'Hardware Additions',tactic:'initial-access',desc:'Adversaries may physically introduce rogue hardware such as USB drives or network devices to gain access.'},
+    {id:'T1059',name:'Command and Scripting Interpreter',tactic:'execution',desc:'Adversaries use scripting languages and command interpreters (PowerShell, Python, Bash, CMD) to execute malicious commands.'},
+    {id:'T1053',name:'Scheduled Task/Job',tactic:'execution',desc:'Adversaries abuse task scheduling to execute malicious code at a specified time or interval for persistence or privilege escalation.'},
+    {id:'T1055',name:'Process Injection',tactic:'defense-evasion',desc:'Adversaries inject code into legitimate processes to evade defenses and elevate privileges, using techniques like DLL injection and process hollowing.'},
+    {id:'T1027',name:'Obfuscated Files or Information',tactic:'defense-evasion',desc:'Adversaries obfuscate files or information to make detection more difficult, using encoding, encryption, and packing.'},
+    {id:'T1070',name:'Indicator Removal',tactic:'defense-evasion',desc:'Adversaries delete or modify artifacts to remove evidence of their presence, including log files, timestamps, and registry keys.'},
+    {id:'T1078',name:'Valid Accounts',tactic:'defense-evasion',desc:'Adversaries obtain and abuse credentials to gain initial access, persistence, and privilege escalation using legitimate user accounts.'},
+    {id:'T1105',name:'Ingress Tool Transfer',tactic:'command-and-control',desc:'Adversaries transfer tools or other files from external systems into a compromised environment to enable further operations.'},
+    {id:'T1041',name:'Exfiltration Over C2 Channel',tactic:'exfiltration',desc:'Adversaries steal data by exfiltrating it over the command and control channel, making it harder to distinguish from normal C2 traffic.'},
+    {id:'T1071',name:'Application Layer Protocol',tactic:'command-and-control',desc:'Adversaries communicate with compromised systems using common application layer protocols like HTTP, HTTPS, DNS, and SMTP.'},
+    {id:'T1003',name:'OS Credential Dumping',tactic:'credential-access',desc:'Adversaries dump credentials from the OS including LSASS memory, SAM, and NTDS to obtain account login information.'},
+    {id:'T1021',name:'Remote Services',tactic:'lateral-movement',desc:'Adversaries use valid accounts to log into remote services like RDP, SMB, WinRM, and SSH to move laterally.'},
+    {id:'T1083',name:'File and Directory Discovery',tactic:'discovery',desc:'Adversaries enumerate files and directories to understand the file system and identify targets of interest.'},
+    {id:'T1057',name:'Process Discovery',tactic:'discovery',desc:'Adversaries enumerate running processes to understand the target environment and identify security tools to disable.'},
+    {id:'T1068',name:'Exploitation for Privilege Escalation',tactic:'privilege-escalation',desc:'Adversaries exploit software vulnerabilities to elevate privileges, such as kernel exploits or misconfigurations.'},
+    {id:'T1136',name:'Create Account',tactic:'persistence',desc:'Adversaries create accounts to maintain access after initial exploitation, including local, domain, and cloud accounts.'},
+    {id:'T1098',name:'Account Manipulation',tactic:'persistence',desc:'Adversaries manipulate accounts to maintain access including adding users to groups and modifying permissions.'},
+    {id:'T1486',name:'Data Encrypted for Impact',tactic:'impact',desc:'Adversaries encrypt data on target systems to interrupt availability, usually demanding ransom for the decryption key.'},
+    {id:'T1561',name:'Disk Wipe',tactic:'impact',desc:'Adversaries wipe disk contents to interrupt availability, targeting the MBR, partition table, or entire file system.'},
+    {id:'T1529',name:'System Shutdown/Reboot',tactic:'impact',desc:'Adversaries may shut down or reboot systems to interrupt availability or aid the effects of destructive operations.'},
+    {id:'T1113',name:'Screen Capture',tactic:'collection',desc:'Adversaries capture screen content to collect sensitive information including credentials and financial data.'},
+    {id:'T1005',name:'Data from Local System',tactic:'collection',desc:'Adversaries collect data from the local system including files, databases, and environment details.'},
+    {id:'T1552',name:'Unsecured Credentials',tactic:'credential-access',desc:'Adversaries search for credentials stored insecurely including in files, registry, browser, and cloud metadata.'},
+    {id:'T1621',name:'Multi-Factor Authentication Request Generation',tactic:'credential-access',desc:'Adversaries generate MFA push requests to gain access through social engineering fatigue.'},
+    {id:'T1476',name:'Deliver Malicious App via Authorized App Store',tactic:'initial-access',desc:'Adversaries deliver malicious mobile applications through legitimate app stores by hiding malware in legitimate-looking apps.'},
+    {id:'T1430',name:'Location Tracking',tactic:'collection',desc:'Adversaries may track a device\'s physical location through GPS and other sensors to monitor targets.'},
+    {id:'T1533',name:'Data from Local System (Mobile)',tactic:'collection',desc:'Adversaries collect data stored on mobile devices including contacts, messages, and media files.'},
+  ],
+
+  software: [
+    {id:'S0154',name:'Cobalt Strike',type:'tool',aliases:['CobaltStrike'],desc:'Cobalt Strike is a commercial penetration testing toolkit widely abused by threat actors. It provides a post-exploitation framework with beaconing capabilities.'},
+    {id:'S0030',name:'Carbanak',type:'malware',aliases:['Anunak'],desc:'Carbanak is a sophisticated banking malware used by the Carbanak group to compromise financial institutions and conduct large-scale theft via SWIFT fraud.'},
+    {id:'S0002',name:'Mimikatz',type:'tool',aliases:['mimi'],desc:'Mimikatz is a widely-used credential theft tool that extracts plaintext passwords, hashes, and Kerberos tickets from Windows memory.'},
+    {id:'S0001',name:'HiKit',type:'malware',aliases:[],desc:'HiKit is a sophisticated rootkit malware used by several Chinese threat groups to maintain long-term persistent access.'},
+    {id:'S0003',name:'RIPTIDE',type:'malware',aliases:[],desc:'RIPTIDE is a proxy-aware backdoor used by APT17 that communicates over HTTP.'},
+    {id:'S0023',name:'CHOPSTICK',type:'malware',aliases:['X-Agent','Sofacy','APIIS Backdoor'],desc:'CHOPSTICK is a sophisticated backdoor used by APT28 with extensive functionality including keylogging, file collection, and a plugin architecture.'},
+    {id:'S0027',name:'Zeroaccess',type:'malware',aliases:['Sirefef'],desc:'ZeroAccess is a kernel-mode rootkit used for click fraud and Bitcoin mining, forming a large peer-to-peer botnet.'},
+    {id:'S0028',name:'HTRAN',type:'tool',aliases:['HUC Packet Transmitter'],desc:'HTRAN is a connection proxy tool used by Chinese threat groups to obfuscate attacker infrastructure.'},
+    {id:'S0031',name:'SPACESHIP',type:'malware',aliases:[],desc:'SPACESHIP is a second-stage backdoor used by Turla that collects files and other data.'},
+    {id:'S0032',name:'gh0st RAT',type:'malware',aliases:['Farfli'],desc:'gh0st RAT is an open-source remote access tool widely used by Chinese threat actors, providing keylogging, screen capture, and file management.'},
+    {id:'S0045',name:'ADVSTORESHELL',type:'malware',aliases:['NETUI','EVILTOSS','NETUI'],desc:'ADVSTORESHELL is a spying backdoor used by APT28, acting as a plugin host that executes additional payloads.'},
+    {id:'S0046',name:'CozyCar',type:'malware',aliases:['CozyDuke','MiniDionis'],desc:'CozyCar is a modular malware used by APT29 for espionage operations, featuring a plugin architecture and encrypted communications.'},
+    {id:'S0055',name:'RARSTONE',type:'malware',aliases:[],desc:'RARSTONE is a backdoor used by APT3 that includes process injection and registry-based persistence.'},
+    {id:'S0061',name:'HDoor',type:'malware',aliases:[],desc:'HDoor is a custom backdoor used by several China-based threat groups for persistent access.'},
+    {id:'S0066',name:'3PARA RAT',type:'malware',aliases:['PoisonIvy'],desc:'3PARA RAT is a remote access tool widely used by Chinese APT groups, known for its small footprint and extensive capabilities.'},
+    {id:'S0090',name:'Rover',type:'malware',aliases:[],desc:'Rover is a malware used by APT19 to collect files from hosts and upload them to a C2 server.'},
+    {id:'S0091',name:'BUBBLEWRAP',type:'malware',aliases:['Backdoor.APT.FakeWinHTTPHelper'],desc:'BUBBLEWRAP is a full-featured backdoor used by multiple Chinese APT groups including Tick and Tonto Team.'},
+    {id:'S0093',name:'Backdoor.Oldrea',type:'malware',aliases:['Havex','Energetic Bear RAT'],desc:'Backdoor.Oldrea is a custom malware used by Dragonfly for industrial espionage, capable of collecting ICS/SCADA data.'},
+    {id:'S0095',name:'FakeM',type:'malware',aliases:[],desc:'FakeM is a shellcode-based malware used by APT3 that mimics legitimate Windows services.'},
+    {id:'S0106',name:'cmd',type:'tool',aliases:[],desc:'cmd.exe is the Windows command-line interpreter commonly abused by threat actors for execution.'},
+    {id:'S0131',name:'TINYTYPHON',type:'malware',aliases:[],desc:'TINYTYPHON is a backdoor used by APT38 in attacks on financial institutions.'},
+    {id:'S0135',name:'NETWORK',type:'malware',aliases:['Elise'],desc:'Elise is a custom backdoor used by Lotus Blossom targeting Southeast Asian governments.'},
+    {id:'S0150',name:'POSHSPY',type:'malware',aliases:[],desc:'POSHSPY is a backdoor used by Molerats that uses WMI subscriptions for persistence and PowerShell for payload execution.'},
+    {id:'S0154',name:'Cobalt Strike',type:'tool',aliases:[],desc:'See above'},
+    {id:'S0167',name:'Matryoshka',type:'malware',aliases:[],desc:'Matryoshka is a multi-stage backdoor used by APT32 that uses DLL side-loading for persistence.'},
+    {id:'S0176',name:'Wingbird',type:'malware',aliases:['NightHunter'],desc:'Wingbird is a backdoor used by Sandworm Team in attacks against Windows systems.'},
+    {id:'S0188',name:'Nebulae',type:'malware',aliases:[],desc:'Nebulae is a backdoor used by Leviathan (APT40) that provides remote access to compromised systems.'},
+    {id:'S0200',name:'Daserf',type:'malware',aliases:['Muirim','Nioupale'],desc:'Daserf is a backdoor used by APT32 for long-term espionage operations in Asia.'},
+    {id:'S0233',name:'TURNEDUP',type:'malware',aliases:[],desc:'TURNEDUP is a backdoor used by APT33 that is capable of uploading files and executing commands.'},
+    {id:'S0260',name:'InvisiMole',type:'malware',aliases:[],desc:'InvisiMole is a sophisticated spyware used by Inception Group with two functional modules for extensive surveillance.'},
+    {id:'S0261',name:'Stealth Mango',type:'malware',aliases:[],desc:'Stealth Mango is Android surveillance malware used by Gamaredon targeting government officials.'},
+    {id:'S0266',name:'TrickBot',type:'malware',aliases:['TheTrick','Trickster'],desc:'TrickBot is a modular banking trojan used by Wizard Spider that evolved into a major malware distribution platform.'},
+    {id:'S0268',name:'Crimson',type:'malware',aliases:[],desc:'Crimson is a remote access tool used by Transparent Tribe targeting Indian government and military officials.'},
+    {id:'S0281',name:'Bankshot',type:'malware',aliases:[],desc:'Bankshot is an implant used by APT38 during an attempted attack against a Central American bank.'},
+    {id:'S0354',name:'Denis',type:'malware',aliases:[],desc:'Denis is a backdoor used by APT32 (OceanLotus) in targeted attacks against Southeast Asian entities.'},
+    {id:'S0357',name:'Dogcall',type:'malware',aliases:['ROKRAT'],desc:'ROKRAT is a cloud-based RAT used by APT37 that abuses legitimate cloud services for C2.'},
+    {id:'S0360',name:'BONDUPDATER',type:'malware',aliases:[],desc:'BONDUPDATER is a PowerShell backdoor used by APT34 (OilRig) with DNS tunneling for C2.'},
+    {id:'S0363',name:'Empire',type:'tool',aliases:['PowerShell Empire'],desc:'PowerShell Empire is an open-source post-exploitation framework widely used by both red teams and threat actors.'},
+    {id:'S0366',name:'WannaCry',type:'malware',aliases:['WannaCrypt','Wcry'],desc:'WannaCry is ransomware that spread globally in May 2017 using the EternalBlue exploit, attributed to North Korea\'s Lazarus Group.'},
+    {id:'S0369',name:'CozyCar',type:'malware',aliases:['MiniDionis'],desc:'See CozyCar'},
+    {id:'S0373',name:'Explosive',type:'malware',aliases:[],desc:'Explosive is a sophisticated backdoor used by Leviathan (APT40) in attacks against the maritime sector.'},
+    {id:'S0379',name:'Revenge RAT',type:'malware',aliases:['RevengeRat'],desc:'Revenge RAT is a commodity remote access tool frequently used by threat groups including Kimsuky.'},
+    {id:'S0384',name:'Dridex',type:'malware',aliases:['Bugat','Cridex'],desc:'Dridex is a banking trojan used by Indrik Spider (Evil Corp) that evolved from Bugat/Cridex for financial fraud.'},
+    {id:'S0385',name:'POWERSTATS',type:'malware',aliases:['POWRUNNER'],desc:'POWERSTATS is a PowerShell-based backdoor used by MuddyWater for C2 and data collection.'},
+    {id:'S0389',name:'JRat',type:'malware',aliases:['Jrat','JRAT'],desc:'JRat is a Java-based remote access tool used by APT37 and other groups.'},
+    {id:'S0394',name:'HelloWorld',type:'malware',aliases:[],desc:'HelloWorld is a malware dropper associated with Winnti Group supply chain attacks.'},
+    {id:'S0395',name:'KeyBoy',type:'malware',aliases:[],desc:'KeyBoy is a Windows backdoor used by Lotus Blossom with keylogging capabilities.'},
+    {id:'S0412',name:'ZxShell',type:'malware',aliases:['Sensocode'],desc:'ZxShell is an open-source remote administration tool widely used by Chinese threat groups.'},
+    {id:'S0446',name:'Ryuk',type:'malware',aliases:['HERMES'],desc:'Ryuk is a ransomware used by Wizard Spider derived from Hermes. Has caused hundreds of millions of dollars in damage.'},
+    {id:'S0475',name:'BackdoorDiplomacy',type:'malware',aliases:[],desc:'A backdoor attributed to the BackdoorDiplomacy group targeting diplomatic entities.'},
+    {id:'S0491',name:'StrongPity',type:'malware',aliases:['PROMETHIUM'],desc:'StrongPity is a data collection malware used by the PROMETHIUM group targeting political activists.'},
+    {id:'S0496',name:'REvil',type:'malware',aliases:['Sodinokibi','Sodin'],desc:'REvil is a ransomware-as-a-service operated by GOLD SOUTHFIELD responsible for numerous high-profile attacks.'},
+    {id:'S0518',name:'PolyglotDuke',type:'malware',aliases:[],desc:'PolyglotDuke is a downloader used by APT29 that uses Twitter, Reddit, and other platforms for C2.'},
+    {id:'S0526',name:'KGH_SPY',type:'malware',aliases:[],desc:'KGH_SPY is a modular spyware used by Kimsuky in targeted attacks against South Korean entities.'},
+    {id:'S0531',name:'Grandoreiro',type:'malware',aliases:[],desc:'Grandoreiro is a banking trojan targeting Spanish and Portuguese-speaking users in Latin America and Europe.'},
+    {id:'S0533',name:'SLOTHFULMEDIA',type:'malware',aliases:[],desc:'SLOTHFULMEDIA is a RAT used by APT41 with keylogging, screen capture, and file management capabilities.'},
+    {id:'S0547',name:'MarkiRAT',type:'malware',aliases:[],desc:'MarkiRAT is a custom backdoor used by Ferocious Kitten targeting Iranian dissidents via Telegram.'},
+    {id:'S0552',name:'AdFind',type:'tool',aliases:[],desc:'AdFind is a free command-line Active Directory query tool abused by threat actors to collect AD information.'},
+    {id:'S0590',name:'NBTscan',type:'tool',aliases:[],desc:'NBTscan is a network scanner that discovers NetBIOS information, commonly used in reconnaissance.'},
+    {id:'S0603',name:'Industroyer',type:'malware',aliases:['Crashoverride'],desc:'Industroyer (CrashOverride) is malware designed to disrupt industrial control systems, used by Sandworm in the 2016 Ukraine power outage.'},
+    {id:'S0606',name:'ShadowPad',type:'malware',aliases:[],desc:'ShadowPad is a modular backdoor used by multiple Chinese threat groups distributed via supply chain compromises.'},
+    {id:'S0650',name:'QakBot',type:'malware',aliases:['QBot','Quakbot','Pinkslipbot'],desc:'QakBot is a banking trojan that has been repurposed as a malware loader used to deliver ransomware.'},
+  ],
+
+  campaigns: [
+    {id:'C0014',name:'Operation Cloud Hopper',group:'menuPass',year:'2014-2017',desc:'Cloud Hopper was a global espionage campaign by menuPass (APT10) targeting managed service providers to gain access to their clients across 15 countries.'},
+    {id:'C0021',name:'Operation AppleJeus',group:'Lazarus Group',year:'2018-2022',desc:'AppleJeus is a Lazarus Group campaign distributing trojanized cryptocurrency trading applications to steal funds from exchanges and individuals.'},
+    {id:'C0024',name:'SolarWinds Compromise',group:'APT29',year:'2020',desc:'The SolarWinds supply chain attack compromised ~18,000 organizations including multiple US federal agencies. Attributed to APT29 (Cozy Bear).'},
+    {id:'C0025',name:'Operation Sofacy',group:'APT28',year:'2014-2016',desc:'A series of APT28 campaigns targeting US political organizations, think tanks, and government agencies including the DNC.'},
+    {id:'C0028',name:'Olympic Destroyer',group:'Sandworm',year:'2018',desc:'Olympic Destroyer disrupted the 2018 Pyeongchang Winter Olympics IT infrastructure, attributed to Sandworm with false flags planted.'},
+    {id:'C0034',name:'NotPetya',group:'Sandworm',year:'2017',desc:'NotPetya was a destructive wiper disguised as ransomware causing over $10 billion in damage globally. Attributed to Russia\'s Sandworm unit.'},
+  ]
+};
+/* ATTACK_DATA_END */
+
+/* ============================================================
+   ORIGIN COLOR MAP
+   ============================================================ */
+const ORIGIN_STYLE = {
+  'China':        {color:'#f0544f',bg:'rgba(240,84,79,.12)'},
+  'Russia':       {color:'#3b9eff',bg:'rgba(59,158,255,.12)'},
+  'North Korea':  {color:'#e8a030',bg:'rgba(232,160,48,.12)'},
+  'Iran':         {color:'#34c07a',bg:'rgba(52,192,122,.12)'},
+  'USA':          {color:'#a673f5',bg:'rgba(166,115,245,.12)'},
+  'South Korea':  {color:'#24c8c0',bg:'rgba(36,200,192,.12)'},
+  'Israel':       {color:'#24c8c0',bg:'rgba(36,200,192,.12)'},
+  'Vietnam':      {color:'#34c07a',bg:'rgba(52,192,122,.12)'},
+  'Palestine':    {color:'#e8a030',bg:'rgba(232,160,48,.12)'},
+  'Pakistan':     {color:'#a673f5',bg:'rgba(166,115,245,.12)'},
+  'India':        {color:'#f06090',bg:'rgba(240,96,144,.12)'},
+  'Nigeria':      {color:'#34c07a',bg:'rgba(52,192,122,.12)'},
+  'Lebanon':      {color:'#34c07a',bg:'rgba(52,192,122,.12)'},
+  'Brazil':       {color:'#34c07a',bg:'rgba(52,192,122,.12)'},
+  'South America':{color:'#34c07a',bg:'rgba(52,192,122,.12)'},
+  'Unknown':      {color:'#637590',bg:'rgba(99,117,144,.12)'},
+};
+
+const TACTIC_COLORS = {
+  'initial-access':      '#f0544f',
+  'execution':           '#e8a030',
+  'persistence':         '#a673f5',
+  'privilege-escalation':'#f06090',
+  'defense-evasion':     '#3b9eff',
+  'credential-access':   '#f0544f',
+  'discovery':           '#24c8c0',
+  'lateral-movement':    '#e8a030',
+  'collection':          '#a673f5',
+  'command-and-control': '#3b9eff',
+  'exfiltration':        '#f06090',
+  'impact':              '#f0544f',
+  'reconnaissance':      '#637590',
+  'resource-development':'#637590',
+};
+
+const TACTIC_LABELS = {
+  'initial-access':'Initial Access','execution':'Execution','persistence':'Persistence',
+  'privilege-escalation':'Priv. Escalation','defense-evasion':'Defense Evasion',
+  'credential-access':'Credential Access','discovery':'Discovery',
+  'lateral-movement':'Lateral Movement','collection':'Collection',
+  'command-and-control':'C2','exfiltration':'Exfiltration','impact':'Impact',
+  'reconnaissance':'Reconnaissance','resource-development':'Resource Dev.',
+};
+
+const TACTIC_ORDER = ['reconnaissance','resource-development','initial-access','execution',
+  'persistence','privilege-escalation','defense-evasion','credential-access',
+  'discovery','lateral-movement','collection','command-and-control','exfiltration','impact'];
+
+/* build indexes */
+const techById = {};
+DATA.techniques.forEach(t => techById[t.id] = t);
+const swById = {};
+DATA.software.forEach(s => swById[s.id] = s);
+const groupById = {};
+DATA.groups.forEach(g => groupById[g.id] = g);
+
+/* tech actors reverse index */
+const techActors = {};
+DATA.groups.forEach(g => {
+  g.techs.forEach(tid => {
+    if (!techActors[tid]) techActors[tid] = [];
+    if (!techActors[tid].includes(g.name)) techActors[tid].push(g.name);
+  });
+});
+
+/* ============================================================
+   HELPERS
+   ============================================================ */
+const $id = id => document.getElementById(id);
+function originStyle(o) { return ORIGIN_STYLE[o] || ORIGIN_STYLE['Unknown']; }
+function tacColor(t)    { return TACTIC_COLORS[t] || '#637590'; }
+function tacLabel(t)    { return TACTIC_LABELS[t] || t; }
+function trunc(s, n)    { return s && s.length > n ? s.slice(0, n) + '…' : (s || ''); }
+function hexAlpha(hex, a) {
+  const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+  return `rgba(${r},${g},${b},${a})`;
+}
+
+/* ============================================================
+   STATE
+   ============================================================ */
+const S = {
+  page: 'actors',
+  actorQ: '', actorOrigin: '', actorSort: 'tech-count',
+  techQ: '', techTactic: '',
+  swQ: '', swType: '',
+};
+
+/* ============================================================
+   ROUTER
+   ============================================================ */
+const Router = {
+  pages:  ['actors','techniques','heatmap','software'],
+  labels: {actors:'Threat Actors',techniques:'Techniques',heatmap:'Coverage Map',software:'Malware & Tools'},
+  icons: {
+    actors:     `<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>`,
+    techniques: `<svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>`,
+    heatmap:    `<svg viewBox="0 0 24 24"><path d="M3 3h18v18H3zM3 9h18M3 15h18M9 3v18M15 3v18"/></svg>`,
+    software:   `<svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>`,
+  },
+  go(page) {
+    S.page = page;
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.querySelectorAll('[data-page]').forEach(b => b.classList.remove('active'));
+    $id(`view-${page}`).classList.add('active');
+    document.querySelectorAll(`[data-page="${page}"]`).forEach(b => b.classList.add('active'));
+    window.scrollTo({top:0,behavior:'smooth'});
+    Views[page]();
+  },
+  build() {
+    const tnav = $id('topbar-nav');
+    const mnav = document.getElementById('mobile-nav');
+    this.pages.forEach(p => {
+      const b = document.createElement('button');
+      b.className = 'tnav-btn'; b.setAttribute('data-page', p); b.textContent = this.labels[p];
+      b.addEventListener('click', () => this.go(p)); tnav.appendChild(b);
+
+      const mb = document.createElement('button');
+      mb.className = 'mnav-btn'; mb.setAttribute('data-page', p);
+      mb.innerHTML = this.icons[p] + `<span>${this.labels[p].split(' ')[0]}</span>`;
+      mb.addEventListener('click', () => this.go(p)); mnav.appendChild(mb);
+    });
+  }
+};
+
+/* ============================================================
+   VIEWS
+   ============================================================ */
+const Views = {
+
+  actors() {
+    const root = $id('view-actors');
+    root.innerHTML = '';
+
+    /* stats */
+    const origins = {};
+    DATA.groups.forEach(g => origins[g.origin] = (origins[g.origin]||0)+1);
+    const topO = Object.entries(origins).sort((a,b)=>b[1]-a[1])[0];
+    const statsData = [
+      {label:'Threat Groups', value:DATA.groups.length, color:'var(--blue)'},
+      {label:'Techniques', value:DATA.techniques.length, color:'var(--amber)'},
+      {label:'Software', value:DATA.software.length, color:'var(--purple)'},
+      {label:'Campaigns', value:DATA.campaigns.length, color:'var(--teal)'},
+      {label:'Top Origin', value:topO?.[0]||'—', color:'var(--red)', small:true},
+    ];
+    const strip = document.createElement('div'); strip.className = 'stats-strip';
+    statsData.forEach(s => {
+      const card = document.createElement('div'); card.className = 'stat-card';
+      card.style.borderTopColor = s.color;
+      card.innerHTML = `<div class="stat-label">${s.label}</div>
+        <div class="stat-value" style="color:${s.color};${s.small?'font-size:18px':''}">${s.value}</div>`;
+      strip.appendChild(card);
+    });
+    root.appendChild(strip);
+
+    /* filters */
+    const filtersRow = document.createElement('div'); filtersRow.className = 'filters-row';
+    const sw = document.createElement('div'); sw.className = 'search-field';
+    sw.innerHTML = `<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>`;
+    const si = document.createElement('input'); si.placeholder = 'Search actors, aliases, descriptions...';
+    si.value = S.actorQ;
+    si.addEventListener('input', e => { S.actorQ = e.target.value; renderCards(); });
+    sw.appendChild(si); filtersRow.appendChild(sw);
+
+    const makeSelect = (opts, val, cb) => {
+      const s = document.createElement('select'); s.className = 'fsel';
+      opts.forEach(([v,l]) => { const o = document.createElement('option'); o.value=v; o.textContent=l; if(v===val)o.selected=true; s.appendChild(o); });
+      s.addEventListener('change', e => cb(e.target.value)); return s;
+    };
+    const origins2 = [...new Set(DATA.groups.map(g=>g.origin))].sort();
+    filtersRow.appendChild(makeSelect([['','All Origins'],...origins2.map(o=>[o,o])], S.actorOrigin, v => { S.actorOrigin=v; renderCards(); }));
+    filtersRow.appendChild(makeSelect([['tech-count','Most Techniques'],['name','Name A-Z'],['sw-count','Most Software']], S.actorSort, v => { S.actorSort=v; renderCards(); }));
+    const countChip = document.createElement('div'); countChip.className = 'count-chip'; countChip.id = 'actor-count';
+    filtersRow.appendChild(countChip);
+    root.appendChild(filtersRow);
+
+    const grid = document.createElement('div'); grid.className = 'actor-grid'; grid.id = 'actor-grid';
+    root.appendChild(grid);
+
+    const renderCards = () => {
+      const q = S.actorQ.toLowerCase();
+      let list = DATA.groups.filter(g => {
+        const mq = !q || g.name.toLowerCase().includes(q) || g.id.toLowerCase().includes(q) ||
+          (g.aliases||[]).some(a=>a.toLowerCase().includes(q)) || g.desc.toLowerCase().includes(q);
+        const mo = !S.actorOrigin || g.origin === S.actorOrigin;
+        return mq && mo;
+      });
+      list.sort((a,b) => {
+        if (S.actorSort==='tech-count') return (b.techs?.length||0)-(a.techs?.length||0);
+        if (S.actorSort==='name')       return a.name.localeCompare(b.name);
+        if (S.actorSort==='sw-count')   return (b.sw?.length||0)-(a.sw?.length||0);
+        return 0;
+      });
+      $id('actor-count').textContent = `${list.length} of ${DATA.groups.length}`;
+      grid.innerHTML = '';
+      if (!list.length) { grid.innerHTML = '<div class="empty">No threat actors match your filters.</div>'; return; }
+      list.forEach((g, i) => {
+        const style = originStyle(g.origin);
+        const aliases = (g.aliases||[]).filter(a=>a!==g.name).slice(0,3).join(', ');
+        const card = document.createElement('div'); card.className = 'actor-card';
+        card.style.animationDelay = `${Math.min(i,24)*20}ms`;
+        card.innerHTML = `
+          <div class="actor-card-top">
+            <div>
+              <div class="actor-id">${g.id}</div>
+              <div class="actor-name">${g.name}</div>
+              ${aliases?`<div class="actor-aliases">aka: ${aliases}</div>`:''}
+            </div>
+            <span class="origin-badge" style="color:${style.color};border-color:${style.color}44;background:${style.bg}">${g.origin}</span>
+          </div>
+          <div class="actor-desc">${trunc(g.desc,180)}</div>
+          <div class="actor-footer">
+            ${g.techs?.length?`<span class="pill" style="color:var(--amber);border-color:var(--amber)44;background:var(--amber-d)">${g.techs.length} techniques</span>`:''}
+            ${g.sw?.length?`<span class="pill" style="color:var(--purple);border-color:var(--purple)44;background:var(--purple-d)">${g.sw.length} tools</span>`:''}
+            ${g.campaigns?.length?`<span class="pill" style="color:var(--teal);border-color:var(--teal)44;background:var(--teal-d)">${g.campaigns.length} campaigns</span>`:''}
+            <span class="arrow">&#8250;</span>
+          </div>`;
+        card.addEventListener('click', () => Panel.open(g.id));
+        grid.appendChild(card);
+      });
+    };
+    renderCards();
+  },
+
+  techniques() {
+    const root = $id('view-techniques');
+    root.innerHTML = '';
+
+    const filtersRow = document.createElement('div'); filtersRow.className = 'filters-row';
+    const sw = document.createElement('div'); sw.className = 'search-field';
+    sw.innerHTML = `<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>`;
+    const si = document.createElement('input'); si.placeholder = 'Search techniques, IDs...'; si.value = S.techQ;
+    si.addEventListener('input', e => { S.techQ = e.target.value; renderTechs(); });
+    sw.appendChild(si); filtersRow.appendChild(sw);
+
+    const sel = document.createElement('select'); sel.className = 'fsel';
+    [['','All Tactics'],...TACTIC_ORDER.map(t=>[t,tacLabel(t)])].forEach(([v,l]) => {
+      const o = document.createElement('option'); o.value=v; o.textContent=l; if(v===S.techTactic)o.selected=true; sel.appendChild(o);
+    });
+    sel.addEventListener('change', e => { S.techTactic=e.target.value; renderTechs(); });
+    filtersRow.appendChild(sel);
+
+    const chip = document.createElement('div'); chip.className = 'count-chip'; chip.id = 'tech-count';
+    filtersRow.appendChild(chip);
+    root.appendChild(filtersRow);
+
+    const wrap = document.createElement('div'); wrap.id = 'tech-wrap'; root.appendChild(wrap);
+
+    const renderTechs = () => {
+      const q = S.techQ.toLowerCase();
+      let list = DATA.techniques.filter(t =>
+        (!q || t.name.toLowerCase().includes(q) || t.id.toLowerCase().includes(q) || t.desc.toLowerCase().includes(q)) &&
+        (!S.techTactic || t.tactic === S.techTactic)
+      );
+      $id('tech-count').textContent = `${list.length} techniques`;
+      wrap.innerHTML = '';
+      if (!list.length) { wrap.innerHTML = '<div class="empty">No techniques match.</div>'; return; }
+
+      const byTactic = {};
+      list.forEach(t => { if (!byTactic[t.tactic]) byTactic[t.tactic]=[]; byTactic[t.tactic].push(t); });
+      const tacOrder = S.techTactic ? [S.techTactic] : TACTIC_ORDER.filter(t=>byTactic[t]?.length);
+
+      tacOrder.forEach(tac => {
+        const techs = byTactic[tac]; if (!techs?.length) return;
+        const color = tacColor(tac);
+        const section = document.createElement('div'); section.className = 'tactic-section';
+        const header = document.createElement('div'); header.className = 'tactic-header';
+        header.innerHTML = `<div class="tactic-name">${tacLabel(tac)}</div>
+          <span class="tactic-count-badge" style="color:${color};border-color:${color}44;background:${color}14">${techs.length}</span>`;
+        const grid = document.createElement('div'); grid.className = 'tech-grid';
+        techs.sort((a,b)=>(techActors[b.id]?.length||0)-(techActors[a.id]?.length||0)).forEach(t => {
+          const card = document.createElement('div'); card.className = 'tech-card';
+          const actors = (techActors[t.id]||[]);
+          card.innerHTML = `<div class="tech-card-id">${t.id}</div>
+            <div class="tech-card-name">${t.name}</div>
+            <div class="tech-card-actors">${actors.length
+              ? actors.slice(0,3).map(a=>`<span class="tech-actor-tag">${a}</span>`).join('') + (actors.length>3?`<span style="color:var(--tx3);font-size:10px"> +${actors.length-3}</span>`:'')
+              : `<span style="color:var(--tx3);font-size:11px">No attributed actors</span>`
+            }</div>`;
+          card.addEventListener('click', () => window.open(`https://attack.mitre.org/techniques/${t.id}/`,'_blank'));
+          grid.appendChild(card);
+        });
+        section.append(header, grid); wrap.appendChild(section);
+      });
+    };
+    renderTechs();
+  },
+
+  heatmap() {
+    const root = $id('view-heatmap');
+    root.innerHTML = '';
+
+    const desc = document.createElement('p');
+    desc.style.cssText = 'font-size:12px;color:var(--tx2);margin-bottom:16px;line-height:1.6';
+    desc.textContent = 'Each row is a threat actor, each column is a MITRE ATT&CK tactic. Color intensity shows technique coverage. Click any row label to view actor detail.';
+    root.appendChild(desc);
+
+    const actors = DATA.groups.filter(g=>g.techs?.length).sort((a,b)=>b.techs.length-a.techs.length).slice(0,55);
+    const wrap = document.createElement('div'); wrap.className = 'heatmap-wrap';
+    const table = document.createElement('table'); table.className = 'heatmap-table';
+
+    /* header */
+    const thead = document.createElement('thead');
+    const hrow = document.createElement('tr');
+    const th0 = document.createElement('th');
+    th0.style.cssText = 'text-align:left;padding:4px 10px 4px 0;font-family:var(--mono);font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.06em;vertical-align:bottom';
+    th0.textContent = 'Actor';
+    hrow.appendChild(th0);
+
+    /* only tactics covered by our technique set */
+    const coveredTactics = TACTIC_ORDER.filter(tac => DATA.techniques.some(t=>t.tactic===tac));
+    coveredTactics.forEach(tac => {
+      const th = document.createElement('th'); th.className = 'hm-tactic-th';
+      th.textContent = tacLabel(tac); th.style.color = tacColor(tac);
+      hrow.appendChild(th);
+    });
+    const thTotal = document.createElement('th');
+    thTotal.style.cssText = 'font-family:var(--mono);font-size:9px;color:var(--tx3);padding:4px 6px;text-transform:uppercase;letter-spacing:.06em;vertical-align:bottom';
+    thTotal.textContent = 'Total'; hrow.appendChild(thTotal);
+    thead.appendChild(hrow); table.appendChild(thead);
+
+    /* body */
+    const tbody = document.createElement('tbody');
+    actors.forEach(g => {
+      const tacticCounts = {};
+      coveredTactics.forEach(t => tacticCounts[t] = 0);
+      (g.techs||[]).forEach(tid => {
+        const tech = techById[tid];
+        if (tech && tacticCounts[tech.tactic] !== undefined) tacticCounts[tech.tactic]++;
+      });
+      const max = Math.max(...Object.values(tacticCounts), 1);
+      const tr = document.createElement('tr');
+
+      const nameTd = document.createElement('td');
+      const lbl = document.createElement('div'); lbl.className = 'hm-actor-label'; lbl.textContent = g.name;
+      lbl.addEventListener('click', () => Panel.open(g.id));
+      nameTd.appendChild(lbl); tr.appendChild(nameTd);
+
+      coveredTactics.forEach(tac => {
+        const td = document.createElement('td'); td.className = 'hm-td';
+        const count = tacticCounts[tac];
+        const cell = document.createElement('div'); cell.className = 'hm-cell';
+        const color = tacColor(tac);
+        cell.style.background = count > 0 ? hexAlpha(color, 0.12 + (count/max)*0.72) : 'var(--bg4)';
+        cell.title = `${g.name} · ${tacLabel(tac)} · ${count} technique${count!==1?'s':''}`;
+        if (count > 0) cell.addEventListener('click', () => Panel.open(g.id,'techniques',tac));
+        td.appendChild(cell); tr.appendChild(td);
+      });
+
+      const totalTd = document.createElement('td');
+      totalTd.style.cssText = 'font-family:var(--mono);font-size:10px;color:var(--tx2);padding:1px 6px;white-space:nowrap;text-align:right';
+      totalTd.textContent = g.techs.length; tr.appendChild(totalTd);
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody); wrap.appendChild(table); root.appendChild(wrap);
+
+    const legend = document.createElement('div');
+    legend.style.cssText = 'display:flex;gap:16px;margin-top:14px;flex-wrap:wrap;align-items:center';
+    legend.innerHTML = `<span style="font-family:var(--mono);font-size:10px;color:var(--tx3)">Intensity:</span>
+      ${[.15,.4,.65,.85].map((v,i)=>`<div style="display:flex;align-items:center;gap:5px">
+        <div style="width:12px;height:12px;border-radius:3px;background:rgba(59,158,255,${v})"></div>
+        <span style="font-family:var(--mono);font-size:10px;color:var(--tx3)">${['low','mid','high','max'][i]}</span>
+      </div>`).join('')}
+      <span style="font-family:var(--mono);font-size:10px;color:var(--tx3);margin-left:8px">Click cell to view actor techniques</span>`;
+    root.appendChild(legend);
+  },
+
+  software() {
+    const root = $id('view-software');
+    root.innerHTML = '';
+
+    const filtersRow = document.createElement('div'); filtersRow.className = 'filters-row';
+    const sw = document.createElement('div'); sw.className = 'search-field';
+    sw.innerHTML = `<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>`;
+    const si = document.createElement('input'); si.placeholder = 'Search malware, tools, aliases...'; si.value = S.swQ;
+    si.addEventListener('input', e => { S.swQ=e.target.value; renderSw(); });
+    sw.appendChild(si); filtersRow.appendChild(sw);
+
+    const sel = document.createElement('select'); sel.className = 'fsel';
+    [['','All Types'],['malware','Malware'],['tool','Tool']].forEach(([v,l])=>{ const o = document.createElement('option'); o.value=v; o.textContent=l; if(v===S.swType)o.selected=true; sel.appendChild(o); });
+    sel.addEventListener('change', e => { S.swType=e.target.value; renderSw(); });
+    filtersRow.appendChild(sel);
+
+    const chip = document.createElement('div'); chip.className = 'count-chip'; chip.id = 'sw-count';
+    filtersRow.appendChild(chip);
+    root.appendChild(filtersRow);
+
+    const grid = document.createElement('div'); grid.className = 'sw-grid'; grid.id = 'sw-grid';
+    root.appendChild(grid);
+
+    const renderSw = () => {
+      const q = S.swQ.toLowerCase();
+      let list = DATA.software.filter(s =>
+        (!q || s.name.toLowerCase().includes(q) || (s.aliases||[]).some(a=>a.toLowerCase().includes(q)) || s.desc.toLowerCase().includes(q)) &&
+        (!S.swType || s.type === S.swType)
+      ).sort((a,b)=>a.name.localeCompare(b.name));
+      $id('sw-count').textContent = `${list.length} entries`;
+      grid.innerHTML = '';
+      if (!list.length) { grid.innerHTML = '<div class="empty">No software matches.</div>'; return; }
+      list.forEach(s => {
+        const isMal = s.type==='malware';
+        const color = isMal?'var(--red)':'var(--teal)';
+        const colorDim = isMal?'var(--red-d)':'var(--teal-d)';
+        const colorBd  = isMal?'rgba(240,84,79,.2)':'rgba(36,200,192,.2)';
+        const aliases = (s.aliases||[]).filter(a=>a!==s.name).slice(0,3).join(', ');
+        const card = document.createElement('div'); card.className = 'sw-card';
+        card.addEventListener('mouseenter', ()=>card.style.borderColor=color);
+        card.addEventListener('mouseleave', ()=>card.style.borderColor='var(--bd)');
+        card.addEventListener('click', ()=>window.open(`https://attack.mitre.org/software/${s.id}/`,'_blank'));
+        card.innerHTML = `<div class="sw-card-top">
+          <div>
+            <div class="sw-card-id">${s.id}</div>
+            <div class="sw-card-name">${s.name}</div>
+            ${aliases?`<div class="sw-card-aliases">${aliases}</div>`:''}
+          </div>
+          <span class="pill" style="color:${color};border-color:${colorBd};background:${colorDim}">${isMal?'Malware':'Tool'}</span>
+        </div>
+        <div class="sw-card-desc">${trunc(s.desc,200)}</div>`;
+        grid.appendChild(card);
+      });
+    };
+    renderSw();
+  }
+};
+
+/* ============================================================
+   DETAIL PANEL
+   ============================================================ */
+const Panel = {
+  currentId: null,
+  currentTab: 'overview',
+  tacticFilter: null,
+
+  open(id, tab='overview', tacticFilter=null) {
+    this.currentId = id; this.currentTab = tab; this.tacticFilter = tacticFilter;
+    this._render();
+    $id('detail-panel').classList.add('open');
+    $id('panel-overlay').classList.add('open');
+  },
+  close() {
+    $id('detail-panel').classList.remove('open');
+    $id('panel-overlay').classList.remove('open');
+  },
+  _render() {
+    const g = groupById[this.currentId]; if (!g) return;
+    const style = originStyle(g.origin);
+    const aliases = (g.aliases||[]).filter(a=>a!==g.name).join(', ');
+
+    $id('panel-header').innerHTML = `
+      <button class="panel-close" onclick="Panel.close()">ESC</button>
+      <div class="panel-actor-id">${g.id}</div>
+      <div class="panel-name">${g.name}</div>
+      ${aliases?`<div class="panel-aliases">Also known as: ${trunc(aliases,80)}</div>`:''}
+      <div class="panel-tags">
+        <span class="pill" style="color:${style.color};border-color:${style.color}44;background:${style.bg}">${g.origin}</span>
+        ${g.techs?.length?`<span class="pill" style="color:var(--amber);border-color:var(--amber)44;background:var(--amber-d)">${g.techs.length} techniques</span>`:''}
+        ${g.sw?.length?`<span class="pill" style="color:var(--purple);border-color:var(--purple)44;background:var(--purple-d)">${g.sw.length} tools</span>`:''}
+        ${g.campaigns?.length?`<span class="pill" style="color:var(--teal);border-color:var(--teal)44;background:var(--teal-d)">${g.campaigns.length} campaigns</span>`:''}
+      </div>`;
+
+    const tabsEl = $id('panel-tabs');
+    tabsEl.innerHTML = '';
+    [['overview','Overview'],['techniques','Techniques'],['software','Software'],['campaigns','Campaigns']].forEach(([id,label])=>{
+      const btn = document.createElement('button'); btn.className = 'ptab'+(id===this.currentTab?' active':'');
+      btn.textContent = label;
+      btn.addEventListener('click', ()=>{
+        this.currentTab=id; this.tacticFilter=null;
+        document.querySelectorAll('.ptab').forEach(t=>t.classList.remove('active'));
+        btn.classList.add('active');
+        this._renderBody(g);
+      });
+      tabsEl.appendChild(btn);
+    });
+    this._renderBody(g);
+  },
+  _renderBody(g) {
+    const body = $id('panel-body'); body.innerHTML = '';
+    if (this.currentTab==='overview')    this._overview(body,g);
+    if (this.currentTab==='techniques')  this._techniques(body,g);
+    if (this.currentTab==='software')    this._software(body,g);
+    if (this.currentTab==='campaigns')   this._campaigns(body,g);
+  },
+  _overview(body,g) {
+    /* description */
+    const s1 = document.createElement('div'); s1.className='p-section';
+    s1.innerHTML = `<div class="p-section-label">Description</div><div class="p-desc">${g.desc||'No description available.'}</div>`;
+    body.appendChild(s1);
+
+    /* tactic breakdown */
+    if (g.techs?.length) {
+      const s2 = document.createElement('div'); s2.className='p-section';
+      s2.innerHTML = '<div class="p-section-label">Tactic Breakdown</div>';
+      const tacCounts = {};
+      TACTIC_ORDER.forEach(t=>tacCounts[t]=0);
+      (g.techs||[]).forEach(tid=>{ const t=techById[tid]; if(t&&tacCounts[t.tactic]!==undefined)tacCounts[t.tactic]++; });
+      const max = Math.max(...Object.values(tacCounts),1);
+      TACTIC_ORDER.forEach(tac=>{
+        const cnt = tacCounts[tac]; if(!cnt) return;
+        const color = tacColor(tac);
+        const row = document.createElement('div'); row.className='tactic-bar-row';
+        row.innerHTML = `<div class="tactic-bar-labels"><span style="color:${color}">${tacLabel(tac)}</span><span>${cnt}</span></div>
+          <div class="tactic-track"><div class="tactic-fill" style="width:${(cnt/max)*100}%;background:${color}"></div></div>`;
+        s2.appendChild(row);
+      });
+      body.appendChild(s2);
+    }
+
+    /* campaigns */
+    const camps = DATA.campaigns.filter(c=>c.group===g.name);
+    if (camps.length) {
+      const s3 = document.createElement('div'); s3.className='p-section';
+      s3.innerHTML = `<div class="p-section-label">Notable Campaigns</div>`;
+      camps.forEach(c => {
+        const item = document.createElement('div');
+        item.style.cssText = 'background:var(--bg3);border:1px solid var(--bd);border-radius:var(--r-md);padding:10px 12px;margin-bottom:7px';
+        item.innerHTML = `<div style="font-size:13px;font-weight:600;color:var(--tx);margin-bottom:3px">${c.name} <span style="font-family:var(--mono);font-size:10px;color:var(--tx3)">${c.year}</span></div>
+          <div style="font-size:12px;color:var(--tx2);line-height:1.6">${c.desc}</div>`;
+        s3.appendChild(item);
+      });
+      body.appendChild(s3);
+    }
+
+    /* link */
+    const s4 = document.createElement('div'); s4.className='p-section';
+    s4.innerHTML = `<div class="p-section-label">MITRE ATT&CK Reference</div>
+      <a class="p-link" href="https://attack.mitre.org/groups/${g.id}/" target="_blank">View ${g.name} on attack.mitre.org &#8599;</a>`;
+    body.appendChild(s4);
+  },
+  _techniques(body,g) {
+    const techs = (g.techs||[]).map(tid=>techById[tid]).filter(Boolean);
+    if (!techs.length) { body.innerHTML='<div class="empty">No techniques attributed.</div>'; return; }
+    const s = document.createElement('div'); s.className='p-section';
+    s.innerHTML = `<div class="p-section-label">${techs.length} Techniques</div>`;
+
+    const byTactic = {};
+    techs.forEach(t=>{ if(!byTactic[t.tactic])byTactic[t.tactic]=[]; byTactic[t.tactic].push(t); });
+    const tacFilter = this.tacticFilter;
+    const tacs = tacFilter ? [tacFilter] : TACTIC_ORDER.filter(t=>byTactic[t]?.length);
+
+    tacs.forEach(tac=>{
+      const list=byTactic[tac]; if(!list?.length) return;
+      const color=tacColor(tac);
+      const header=document.createElement('div');
+      header.style.cssText=`font-size:11px;font-weight:600;color:${color};margin:14px 0 6px;text-transform:uppercase;letter-spacing:.07em`;
+      header.textContent=`${tacLabel(tac)} (${list.length})`;
+      s.appendChild(header);
+      list.sort((a,b)=>a.name.localeCompare(b.name)).forEach(t=>{
+        const item=document.createElement('div'); item.className='tech-item';
+        item.style.cursor='pointer';
+        item.addEventListener('click',()=>window.open(`https://attack.mitre.org/techniques/${t.id}/`,'_blank'));
+        const tid=document.createElement('span'); tid.className='tech-item-id'; tid.textContent=t.id;
+        const info=document.createElement('div');
+        info.innerHTML=`<div class="tech-item-name">${t.name}</div><div class="tech-item-tactic">${tacLabel(t.tactic)}</div>`;
+        item.append(tid,info); s.appendChild(item);
+      });
+    });
+    body.appendChild(s);
+    this.tacticFilter=null;
+  },
+  _software(body,g) {
+    const sws = (g.sw||[]).map(sid=>swById[sid]).filter(Boolean);
+    if (!sws.length) { body.innerHTML='<div class="empty">No software attributed.</div>'; return; }
+    const s=document.createElement('div'); s.className='p-section';
+    s.innerHTML=`<div class="p-section-label">${sws.length} Software</div>`;
+    sws.sort((a,b)=>a.name.localeCompare(b.name)).forEach(sw=>{
+      const isMal=sw.type==='malware';
+      const color=isMal?'var(--red)':'var(--teal)';
+      const item=document.createElement('div'); item.className='sw-item';
+      const badge=document.createElement('span'); badge.className='sw-type-badge';
+      badge.textContent=isMal?'Malware':'Tool';
+      badge.style.color=color; badge.style.borderColor=isMal?'rgba(240,84,79,.25)':'rgba(36,200,192,.25)'; badge.style.background=isMal?'var(--red-d)':'var(--teal-d)';
+      const info=document.createElement('div');
+      info.innerHTML=`<div class="sw-name">${sw.name}</div><div class="sw-desc">${trunc(sw.desc,90)}</div>`;
+      item.append(badge,info); s.appendChild(item);
+    });
+    body.appendChild(s);
+  },
+  _campaigns(body,g) {
+    const camps=DATA.campaigns.filter(c=>c.group===g.name);
+    if(!camps.length){body.innerHTML='<div class="empty">No campaigns documented.</div>';return;}
+    const s=document.createElement('div'); s.className='p-section';
+    s.innerHTML=`<div class="p-section-label">${camps.length} Campaigns</div>`;
+    camps.forEach(c=>{
+      const item=document.createElement('div');
+      item.style.cssText='background:var(--bg3);border:1px solid var(--bd);border-radius:var(--r-md);padding:12px 14px;margin-bottom:8px';
+      item.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
+        <div style="font-size:13px;font-weight:600;color:var(--tx)">${c.name}</div>
+        <span style="font-family:var(--mono);font-size:10px;color:var(--tx3)">${c.year}</span>
+      </div><div style="font-size:12px;color:var(--tx2);line-height:1.6">${c.desc}</div>`;
+      s.appendChild(item);
+    });
+    body.appendChild(s);
+  }
+};
+
+/* BOOT */
+Router.build();
+Router.go('actors');
+document.querySelectorAll('[data-page="actors"]').forEach(b=>b.classList.add('active'));
+// show last updated date
+const ub = document.getElementById('updated-badge');
+if (ub && DATA.updatedAt) {
+  ub.textContent = `Last updated: ${DATA.updatedAt}`;
+  ub.style.display = 'block';
+}
+</script>
+</body>
+</html>
